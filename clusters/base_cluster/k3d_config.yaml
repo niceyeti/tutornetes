@@ -1,0 +1,52 @@
+apiVersion: k3d.io/v1alpha3 # this will change in the future as we make everything more stable
+kind: Simple # internally, we also have a Cluster config, which is not yet available externally
+# NOTE: name must be updated in other scripts if changed.
+name: devcluster # name that you want to give to your cluster (will still be prefixed with `k3d-`)
+servers: 1 # same as `--servers 1`
+agents: 1 # same as `--agents 1`
+kubeAPI: # same as `--api-port myhost.my.domain:6445` (where the name would resolve to 127.0.0.1)
+  #host: "myhost.my.domain" # important for the `server` setting in the kubeconfig
+  hostIP: "127.0.0.1" # where the Kubernetes API will be listening on
+  hostPort: "6445" # where the Kubernetes API listening port will be mapped to on your host system
+image: rancher/k3s:v1.20.4-k3s1 # same as `--image rancher/k3s:v1.20.4-k3s1`
+#network: my-custom-net # same as `--network my-custom-net`
+#subnet: "172.28.0.0/16" # same as `--subnet 172.28.0.0/16`
+token: superSecretToken # same as `--token superSecretToken`
+
+# How to mount volumes
+#volumes: # repeatable flags are represented as YAML lists
+#  - volume: /my/host/path:/path/in/node # same as `--volume '/my/host/path:/path/in/node@server:0;agent:*'`
+#    nodeFilters:
+#      - server:0
+#      - agent:*
+
+ports:
+  # Note: the loadbalancer port on the host provides ingress to the cluster;
+  # ingress objects created as part of the app deployment will also externally-expose the app
+  # at the node level, which in this case is a container, and therefore a docker network.
+  # So an app may be reached via localhost:8080/some_service and 172.0.18.2/some_service, where 172.* is some docker br-* interface.
+  - port: 8080:80 # same as `--port '8080:80@loadbalancer'``
+    nodeFilters:
+      - loadbalancer
+
+#env:
+#  - envVar: bar=baz # same as `--env 'bar=baz@server:0'`
+#    nodeFilters:
+#      - server:0
+registries: # define how registries should be created or used
+  create: # creates a default registry to be used with the cluster; same as `--registry-create devregistry`
+    name: k3d-devregistry # NOTE: this name corresponds with image yaml references; grep when updating.
+    host: "127.0.0.1"
+    hostPort: "5000"
+  #use:
+  #  - k3d-devregistry:5000 # some other k3d-managed registry; same as `--registry-use 'k3d-myotherregistry:5000'`
+options:
+  k3d: # k3d runtime settings
+    wait: true # wait for cluster to be usable before returining; same as `--wait` (default: true)
+    timeout: "480s" # wait timeout before aborting; same as `--timeout 60s`. NOTE: this should be around 60s, but startup takes a while when pulling the k3s image for the first time, or on a slow network.
+    disableLoadbalancer: false # same as `--no-lb`
+    disableImageVolume: false # same as `--no-image-volume`
+    disableRollback: false # same as `--no-Rollback`
+  kubeconfig:
+    updateDefaultKubeconfig: true # add new cluster to your default Kubeconfig; same as `--kubeconfig-update-default` (default: true)
+    switchCurrentContext: true # also set current-context to the new cluster's context; same as `--kubeconfig-switch-context` (default: true)

@@ -1,0 +1,196 @@
+Helm:
+	Is installed with apt; use apt to update.
+
+	Helm can both create charts and also create and manage deployments by itself.
+	
+
+	helm lint # lint a chart
+	helm repo add bitnami https://charts.bitnami.com/bitnami
+	helm search repo bitnami
+	helm list
+	helm install bitnami/nginx --generate-name
+	helm # nothing, to view all the commands
+	helm show all bitnami/mysql
+	helm status bitnami/mysql1234...
+	helm uninstall bitnami/mysql1234...
+
+
+K3d:
+	Create cluster:
+		k3d cluster create mycluster
+	
+	
+	https://en.sokube.ch/post/k3s-k3d-k8s-a-new-perfect-match-for-dev-and-test-1
+	
+	k3d cluster create mycluster
+	k3d cluster list
+	k3d cluster stop mycluster
+	k3d cluster start mycluster
+	k3d node create newserver --cluster test --role agent
+
+	k3d cluster create test --port 8080:80@loadbalancer --port 8443:443@loadbalancer --api-port 6443 --servers 3 --agents 3
+
+
+
+Create a simple nginx deployment:
+	kubectl create deployment nginx --image=nginx
+	kubectl create service clusterip nginx --tcp=80:80
+	cat <<EOF | kubectl apply -f -
+	apiVersion: networking.k8s.io/v1beta1
+	kind: Ingress
+	metadata:
+	  name: nginx
+	  annotations:
+	    ingress.kubernetes.io/ssl-redirect: "false"
+	spec:
+	  rules:
+	  - http:
+	      paths:
+	      - path: /
+		backend:
+		  serviceName: nginx
+		  servicePort: 80
+	EOF
+
+
+Kubes:
+
+
+
+
+
+# Runtime
+
+## Pause containers and why they matter.
+Pause containers serve as the basis of pods by creating a set of namespaces shared by containers within the pod, allowing
+them to share resources such as mounts, and interfaces such as localhost. They extend features of containers by allowing
+one to implement patterns like sidecars, but they also pertain to responsibilities such as proper container shutdown logic.
+
+Pause containers create these namespaces:
+* ipc (network)
+* uts (hostname)
+* pid
+* mount
+
+The pause container itself simply sleeps forever, but also:
+* acts as pid 1, or "init"
+* reaps zombie processes
+
+Zombie processes are created when a parent process creates them but fails to await their exit code when they have completed.
+The result is that the process is dead, but still has a process entry, because its parent failed to await its completed. These
+processes are assigned to Pid 1. The pause container serves this init purpose, awaiting processes that are reassigned to pid 1.
+
+In containers, one process assumes the role of pid 1. Thus any container that creates subprocesses must responsibly process them,
+but many don't. This is why some containers are launched with tini, to satisfy this architectural requirement without the container
+designer having to worry about it (not responsible way to role, but hey, its the tech industry). Applications like nginx simply
+weren't designed to handle zombie processes since it is outside their scope of responsibility, so why for app implementers to 
+handle this anyway?
+
+This is the annotated and abbreviated code for the pause container (from https://github.com/kubernetes/kubernetes/blob/master/build/pause/linux/pause.c).
+Note that this code is entirely concerned with system semantics and signals, and serves no other purpose but its context.
+Also bear in mind the implication that the code only reaps zombies in the same pid namespace; but there are runtime
+settings whereby containers do not share the same pid namespace.
+```
+#include <signal.h>
+...
+#include <unistd.h>
+
+
+// Await shutdown signal SIGTERM and SIGINT
+static void sigdown(int signo) {
+  // psignal just prints a message based on signo to stderr before we exit
+  psignal(signo, "Shutting down, got signal");
+  exit(0);
+}
+
+// Await signals for SIGCHLD, indicating a child process' whose state has changed.
+// The listener is setup in main, thus calling waitpid with -1 ('any child') here is guaranteed to
+// to return by the semantics of 'waitpid(..., WNOHANG) > 0'. Effectively the signal occurs 
+// any time a child's state changes, and we reap any existing children here, synchronously.
+// See `man waitpid` for extended information.
+static void sigreap(int signo) {
+  while (waitpid(-1, NULL, WNOHANG) > 0)
+    ;
+}
+
+int main(int argc, char **argv) {
+  int i;
+  for (i = 1; i < argc; ++i) {
+    if (!strcasecmp(argv[i], "-v")) {
+      printf("pause.c %s\n", VERSION_STRING(VERSION));
+      return 0;
+    }
+  }
+
+  if (getpid() != 1)
+    /* Not an error because pause sees use outside of infra containers. */
+    fprintf(stderr, "Warning: pause should be the first process\n");
+
+  if (sigaction(SIGINT, &(struct sigaction){.sa_handler = sigdown}, NULL) < 0)
+    return 1;
+  if (sigaction(SIGTERM, &(struct sigaction){.sa_handler = sigdown}, NULL) < 0)
+    return 2;
+  if (sigaction(SIGCHLD, &(struct sigaction){.sa_handler = sigreap,
+                                             .sa_flags = SA_NOCLDSTOP},
+                NULL) < 0)
+    return 3;
+
+  for (;;)
+    pause();
+  fprintf(stderr, "Error: infinite loop terminated\n");
+  return 42;
+}
+```
+
+Any code that does not await child processes can create zombies, which includes many applications.
+A parent process can fail to await a child process for a variety of reasons:
+1) bad semantics
+2) the parent dies
+
+The github link for the pause container code also contains example code for creating huerfanos by forking and not awaiting:
+```
+#include <stdio.h>
+#include <unistd.h>
+
+int main() {
+  pid_t pid;
+  pid = fork();
+  if (pid == 0) {
+    while (getppid() > 1)
+      ;
+    printf("Child exiting: pid=%d ppid=%d\n", getpid(), getppid());
+    return 0;
+  } else if (pid > 0) {
+    printf("Parent exiting: pid=%d ppid=%d\n", getpid(), getppid());
+    return 0;
+  }
+  perror("Could not create child");
+  return 1;
+}
+```
+
+## Build your own container
+Via Ian Lewis and Liz Rice, a simple container can be built from a root filesystem (e.g. alpine) and the unshare command:
+```
+sudo unshare --pid --uts --ipc --mount -f chroot rootfs /bin/sh
+```
+This says 'unshare the parent pid, utc, ipc, and mount namespaces, then run chroot for rootfs, which in turn runs sh.'
+You can then manually add other processes. Liz Rice' 'Container Security' goes into greater depth on the topic.
+
+A 'pause' container can be created manually in docker like so (credit Ian Lewis):
+```
+# run nginx in the provided namespaces
+docker run -d --name nginx -v `pwd`/nginx.conf:/etc/nginx/nginx.conf --net=container:pause --ipc=container:pause --pid=container:pause nginx
+# run ghost as another process within the namespaces of the prior nginx container
+docker run -d --name ghost --net=container:pause --ipc=container:pause --pid=container:pause ghost
+```
+
+
+
+
+
+
+
+
+
+
