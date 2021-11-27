@@ -42,7 +42,7 @@ registries: # define how registries should be created or used
   #  - k3d-devregistry:5000 # some other k3d-managed registry; same as `--registry-use 'k3d-myotherregistry:5000'`
 options:
   k3d: # k3d runtime settings
-    wait: true # wait for cluster to be usable before returining; same as `--wait` (default: true)
+    wait: true # wait for cluster to be usable before returning; same as `--wait` (default: true)
     timeout: "480s" # wait timeout before aborting; same as `--timeout 60s`. NOTE: this should be around 60s, but startup takes a while when pulling the k3s image for the first time, or on a slow network.
     disableLoadbalancer: false # same as `--no-lb`
     disableImageVolume: false # same as `--no-image-volume`
