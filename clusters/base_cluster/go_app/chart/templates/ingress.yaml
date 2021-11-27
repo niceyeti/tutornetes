@@ -1,3 +1,6 @@
+# A sample ingress object. NOTE: ingress represent north/south traffic
+# and would require much more security and configuration than something per-app like this.
+# For simplicity I didn't even include tls.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
