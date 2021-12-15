@@ -1,3 +1,14 @@
+Controllers:
+	Whitepaper: 
+		https://github.com/cncf/tag-app-delivery/blob/eece8f7307f2970f46f100f51932db106db46968/operator-wg/whitepaper/Operator-WhitePaper_v1-0.md
+	https://engineering.bitnami.com/articles/kubewatch-an-example-of-kubernetes-custom-controller.html
+	https://engineering.bitnami.com/articles/a-deep-dive-into-kubernetes-controllers.html
+	Open source:
+		https://github.com/aquasecurity/aqua-operator
+	Examples:
+		https://operatorhub.io/
+	https://web.archive.org/web/20170129131616/https://coreos.com/blog/introducing-operators.html
+
 Helm:
 	Is installed with apt; use apt to update.
 
@@ -55,6 +66,14 @@ Create a simple nginx deployment:
 
 Kubes:
 
+
+
+Security scanning:
+	Kubescape:
+		Just run a cluster then scan with `kubescape scan framework nsa`
+
+	Kubebench:
+		Kubebench has a yaml, which can be simply downloaded and run as a job in the cluster. Or package in a container.
 
 
 

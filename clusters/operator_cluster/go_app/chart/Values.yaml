@@ -1,0 +1,113 @@
+# Default values for a simple go web app.
+# Note that this is very scratch/rough; the app definition below is just to serve
+# as a starting point for a typical service, with no extras (volumes, security, etc).
+# Importantly, the properties of the liveness/readiness and minReadySeconds parameters
+# are just some default I used, and should be tuned conscientiously.
+
+deployment:
+  fullname: "simple-go-app"
+  replicaCount: 1
+  selectorLabels:
+    app: simple-go-app
+    enabled: "true"
+  env:
+    - name: "APP_PORT"
+      value: "80"
+  liveness:
+    periodSeconds: 10
+    initialDelaySeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  # Tolerance period to wait, after readiness succeeds, before forwarding traffic to deployed pods.
+  # TODO: experiment with this parameter.
+  minReadySeconds: 5
+
+image:
+  image: simple-go-app # TODO: consider renaming chart simple-go-app and using .Chart.name here; really, find out what others' convention is.
+  repository: devregistry:5000 # TODO: need to resolve this; port map from outside the cluster is 3xxxx -> :5000 inside the cluster
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+
+#imagePullSecrets: []
+#nameOverride: ""
+#fullnameOverride: ""
+#
+#serviceAccount:
+#  # Specifies whether a service account should be created
+#  create: true
+#  # Annotations to add to the service account
+#  annotations: {}
+#  # The name of the service account to use.
+#  # If not set and create is true, a name is generated using the fullname template
+#  name: ""
+
+podAnnotations:
+  some-annotation: dont-panic-be-happy
+
+#podSecurityContext: {}
+  # fsGroup: 2000
+
+#securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: "ClusterIP"
+  port: "80"
+  containerPort: 80 # TODO: make the app read this from env
+  containerPortName: "http"
+  protocol: "TCP"
+  readiness:
+    periodSeconds: 10
+    initialDelaySeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+
+ingress:
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false" # TODO: er what is this?
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+#  hosts:  # TODO: not used, hardcoded most ingress params in the template. Do some research on this field.
+#    - host: chart-example.local
+#      paths:
+#        - path: /
+#          pathType: ImplementationSpecific
+#  tls: []
+#    - secretName: chart-example-tls
+#      hosts:
+#        - chart-example.local
+
+#resources: {}
+#  # We usually recommend not to specify default resources and to leave this as a conscious
+#  # choice for the user. This also increases chances charts run on environments with little
+#  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+#  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+#  # limits:
+#  #   cpu: 100m
+#  #   memory: 128Mi
+#  # requests:
+#  #   cpu: 100m
+#  #   memory: 128Mi
+#
+#autoscaling:
+#  enabled: false
+#  minReplicas: 1
+#  maxReplicas: 100
+#  targetCPUUtilizationPercentage: 80
+#  # targetMemoryUtilizationPercentage: 80
+#
+#nodeSelector: {}
+#
+#tolerations: []
+#
+#affinity: {}

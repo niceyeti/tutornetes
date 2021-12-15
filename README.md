@@ -1,10 +1,19 @@
 ![image](wrench.png)
 
+```
+     ____        _ ____     _   __      __     ____                    __    __  
+    / __ )__  __(_) / /_   / | / /___  / /_   / __ )____  __  ______ _/ /_  / /_ 
+   / __  / / / / / / __/  /  |/ / __ \/ __/  / __  / __ \/ / / / __ `/ __ \/ __/ 
+  / /_/ / /_/ / / / /_   / /|  / /_/ / /_   / /_/ / /_/ / /_/ / /_/ / / / / /_   
+ /_____/\__,_/_/_/\__/  /_/ |_/\____/\__/  /_____/\____/\__,_/\__, /_/ /_/\__/   
+                                                            /____/               
+```
+... and frequently 'borrowed'.
 
 ## Shtick
 
 The most difficult part of learning and developing kubernetes applications is learning and 
-configuring the many resources required to do so.
+configuring the many resources required.
 This repo provides a template for developing k8s clusters and cloud applications using k3d, helm, and tilt.
 The objective is that you can fork the base_cluster project, modify it to your deployment/app/infrastructure/etc,
 and rapidly develop new clusters, test out charts, and so forth.
@@ -20,11 +29,11 @@ The goals are purely for learning and development:
         * */go_app*: an example golang cloud application with some basic endpoints and a static page
         * */scripts*: script cemetery for random or obsolete scripts
 
-The main resources to understand are in the *base_cluster* folder:
+The primary resources to understand are in the *base_cluster* folder:
 | Resource | Description |
 | :--- | :--- |
 | *k3d_config.yaml* | The base cluster definition. Modify this to create clusters with different properties: nodes, volumes, etc. |
-| *up.sh* | Defines starting, stopping, or deleting the cluster |
+| *up.sh* | Defines starting, stopping, or deleting the base cluster |
 | *Tiltfile* | Drives tilt. Apps and development resources are defined here. |
 | *go_app* |  Contains the helm chart and source code for an example app   |
 | *go_app/chart* |  The helm chart and params for creating the go app's k8s objects. |

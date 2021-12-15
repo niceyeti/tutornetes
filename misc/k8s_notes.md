@@ -98,7 +98,34 @@ Awaiting a service in an init container to latch main container startup:
 
 This create a config map 'myconfig' using the literal and file syntax. The first file syntax stores the filename as the key and the file content as the value; the latter using a directory stores the sub files as keys and their content as the corresponding values.
 
+### Mounted configmaps
+
+Mounting configmap as a volume allows updating mounted values dynamically for tasks like leader election. Updates depend on the underlying state storage (etcd, sqlite, etc.) Best to look this up as needed (and test like hell to ensure reliability), I just find it useful. More advanced mechanisms likely exist, my info is 2017. See docs:
+
+    spec:
+      containers:
+      - image: nginx:alpine
+        name: web-server
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx/conf.d
+          readOnly: true
+          ...
+      volumes:
+      - name: config
+        configMap:
+          name: nginx-config
+		
+Then update the config and poll to detect the change:
+
+    kubectl edit configmap nginx-config
+	kubectl exec nginx -c main cat /etc/nginx/conf.d
+
+
+
 ### Secrets
+
+Secrets are written to tempfs inside containers, and never persisted to disk.
 
 	openssl genrsa -out https.key 2048
 	openssl req -new -x509 -key https.key -out https.cert -days 3650 -subj /CN=www.mysite.com
