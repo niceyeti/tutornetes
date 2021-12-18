@@ -2,9 +2,9 @@
 
 ## Sources
 
-The best source is the [RAFT paper](https://raft.github.io/raft.pdf) itself, which is surprisingly understandable for an academic paper, an details how each step in the process satisfies or excludes specific required/undesired properties. The best way to understand RAFT is as a daisy chain of core principles each of which verified by solving specific timing and sub-problems. 
+The best source is the [RAFT paper](https://raft.github.io/raft.pdf) itself, which is surprisingly lucid for an academic paper, and details how each step in the process satisfies or excludes specific required/undesired properties. The best way to understand RAFT is as a daisy chain of core principles each of which is verified by solving specific timing and sub-problems. 
 
-In other words, it is a hot-mess of asynchronous logical properties, because distributed consistency is as difficult in computers as it is in people. Or so I was told by a facebook fact-checker the last time I made any number of common sensical claims about the state of the world that a fraction of a fraction of the populace strategically proclaim are controversial. Friggin lizard people.  :)
+In other words, it is a hot-mess of asynchronous logical properties, because distributed consistency is as difficult in computers as it is in people. Or so I was told by a facebook fact-checker the last time I made any number of common sensical claims about the state of the world that a fraction of a fraction of the populace strategically proclaim are controversial. Friggin lizard people...  :)
 
 * https://raft.github.io/raft.pdf
 * wikpedia

@@ -10,18 +10,21 @@
 ```
 ... and frequently 'borrowed'.
 
-## Shtick
+## Soapbox
 
-The most difficult part of learning and developing kubernetes applications is learning and 
-configuring the many resources required.
+Perhaps the most difficult part of learning Kubernetes and other CNCF technology is simply learning and configuring the many resources required to do so, whilst navigating materials polluted by professional self-promotion and linkedin-style clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude.
+
 This repo provides a template for developing k8s clusters and cloud applications using k3d, helm, and tilt.
-The objective is that you can fork the base_cluster project, modify it to your deployment/app/infrastructure/etc,
-and rapidly develop new clusters, test out charts, and so forth.
+The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc,
+and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
+to ensure your environment is consistent, then start modifying the base_cluster to rapidly prototype a new cluster, app, 
+chart, etc. The repo includes builtin chart/cluster scanning with kubescape to provide security linting. 
 
-The goals are purely for learning and development:
-1) the ability to design, develop, and spin up clusters with different properties and resources
-2) to rapidly design, develop and test cloud apps
+This repo's goals are pure learning and development:
+1) the ability to design, develop, and spin-up clusters with different properties
+2) to rapidly design, develop and test cloud apps themselves
 3) to provide a learning environment, aka your own personal k8s playground
+4) minimal free-climbing: pushing quality concerns as far upstream in the development process as possible, with immediate development feedback and security/quality scanning.
 
 ## Repo Organization
 * */clusters*: create folders here containing content (helm charts, k3d startup, etc). describing a cluster
@@ -40,7 +43,7 @@ The primary resources to understand are in the *base_cluster* folder:
 | *go_app/src* |  The source code for an extremely simple golang webapp; basically a dockerfile and a few dummy endpoints. |
 
 ## Pre-reqs
-Install docker, k3d, helm, and tilt (see version_info.txt for versions)
+Install docker, k3d, helm, tilt, and kubescape (optional). See version_info.txt for versions.
 
 ## Basic Workflow
 1) cd into *base_cluster*
@@ -55,9 +58,15 @@ Install docker, k3d, helm, and tilt (see version_info.txt for versions)
     * `tilt up`, then open a browser
     * navigate to `localhost:10350`
     * after a minute or so, hit the go app at `localhost:8080/fortune`
+6) Optional: if kubescape is installed, use it to get a report on the security posture of the cluster.
+I set this up to be run manually because it is easiest to maintain and I am unlikely to keep updated; a fully-fledged CI system would run the scanner as a formal part of the linting process, like any linter or test-success exit conditions. Note that kubescape is not an offline tool; see its docs to make sure you understand its remote interactions and reporting.
+    * navigate to `localhost:10350`
+    * click to run the cluster scan; view the results and behold all of the things you have to spend the next week fixing! :P
+    * click to run the app scan; this method scans only the go app and its chart, more relevant to the developer than the entire cluster
+    * See: https://kubernetes.io/blog/2021/10/05/nsa-cisa-kubernetes-hardening-guidance/
 
 ## DevOps Resources
-Software development is difficult enough because of self-promotional pollution online and overall lack of commitment to training by many of the companies for which we work. When I decided to learn kubernetes I made an intentional commitment to avoid online materials all together and instead learn solely from books. Some of the best:
+When I decided to learn kubernetes I consciously committed to avoid online materials completely, and to instead learn solely from books. Those I found most useful:
 1) [Kubernetes In Action](https://www.amazon.com/Kubernetes-Action-Marko-Luksa/dp/1617293725/)
 2) [Kubernetes Patterns](https://www.amazon.com/Kubernetes-Patterns-Designing-Cloud-Native-Applications/dp/1492050288/)
 3) [Design Patterns for Container-Based Distributed Systems](https://www.usenix.org/conference/hotcloud16/workshop-program/presentation/burns) (free and a quick read)
@@ -66,7 +75,7 @@ Software development is difficult enough because of self-promotional pollution o
 6) [Tilt](https://tilt.dev/): [simple k3d tilt example](https://github.com/iwilltry42/k3d-demo/blob/main/Tiltfile)
 
 ## Credit
-This repo was gratefully built atop k3d, docker, tilt, helm, k3s, and kubernetes--and google as well. All credit for these tools goes to their authors. Seriously, thanks a ton.
+This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, and kubernetes--and google as well. All credit for these tools goes to their authors. Seriously, thanks a ton! Those who teach instead of tell deserve utmost praise.
 
 Some very helpful teachers:
 * https://www.youtube.com/c/MarcelDempers

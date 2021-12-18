@@ -71,6 +71,7 @@ Kubes:
 Security scanning:
 	Kubescape:
 		Just run a cluster then scan with `kubescape scan framework nsa`
+		Optional: kubescape scan framework nsa --exclude-namespaces some-namespace,other-namespace
 
 	Kubebench:
 		Kubebench has a yaml, which can be simply downloaded and run as a job in the cluster. Or package in a container.
