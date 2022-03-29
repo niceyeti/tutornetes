@@ -43,10 +43,7 @@ The primary resources to understand are in the *base_cluster* folder:
 | *go_app/src* |  The source code for an extremely simple golang webapp; basically a dockerfile and a few dummy endpoints. |
 
 ## Pre-reqs
-Install docker, k3d, helm, tilt, and kubescape (optional). See version_info.txt for versions.
-
-## Updating and Maintenance
-* Updating k3d: after updating k3d and k3s, run `k3d config migrate k3d_config.yaml new_config.yaml` and review the new config, then commit it. The migration code itself can be reviewed in the k3d repo.
+Install docker, k3d, helm, tilt, kubescape (optional), and istio (if used). See version_info.txt for versions.
 
 ## Basic Workflow
 1) cd into *base_cluster*
@@ -67,6 +64,17 @@ I set this up to be run manually because it is easiest to maintain and I am unli
     * click to run the cluster scan; view the results and behold all of the things you have to spend the next week fixing! :P
     * click to run the app scan; this method scans only the go app and its chart, more relevant to the developer than the entire cluster
     * See: https://kubernetes.io/blog/2021/10/05/nsa-cisa-kubernetes-hardening-guidance/
+
+
+## Updating and Maintenance
+* Updating k3d: after updating k3d and k3s, run `k3d config migrate k3d_config.yaml new_config.yaml` and review the new config, then commit it. The migration code itself can be reviewed in the k3d repo.
+* Installing and updating istio: istio was installed using the installation directions [here](https://istio.io/latest/docs/setup/getting-started/). I installed it to the misc/ directory so the version is part of the repository, not the system.
+    * Installation:
+        * cd misc
+        * curl -L https://istio.io/downloadIstio | sh -
+        * cd istio-[version]/
+        * export PATH=$PATH:$pwd/bin
+    * Updating: same as installation, just make review and update how the istio manifest is committed; the intent is simply to ensure that the istio version is in the repo, and no other istio artifacts.
 
 ## DevOps Resources
 When learning kubernetes I consciously avoided online materials entirely and focused solely on books. Some I found most useful:
