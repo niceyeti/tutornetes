@@ -39,12 +39,10 @@ function create() {
     # Create a k3d cluster with n worker nodes. See: https://www.suse.com/c/introduction-k3d-run-k3s-docker-src/
     # "k3d waits until everything is ready, pulls the Kubeconfig from the cluster and merges it with your default Kubeconfig"
     # Note: all ports exposed on the serverlb ("loadbalancer") will be proxied to the same ports on all server nodes in the cluster
-
-    echo "Creating cluster..."
     k3d cluster create --config k3d_config.yaml
     echo "Cluster created."
     echo ""
-    echo "WORKFLOW NOTE: when leaving/bring-back the dev environment, avoid re-pulling images by using '--pause' and '--restart' flags."
+    echo "WORKFLOW NOTE: when leaving/restoring the dev environment, avoid re-pulling images by using '--pause' and '--restart' flags."
 }
 
 function pause() {
@@ -70,6 +68,9 @@ Commands:
         ./up.sh --clean
     * Pause the cluster, saving the registry as well:
         ./up.sh --pause
+    * Updating config/k3d:
+        Updating is best done manually, to refresh the fundamental components.
+        Use `k3d config migrate k3d_config.yaml new_config.yaml`
 
 Workflow: it is best to rely on the k3d api to manage all cluster resources, instead of implementing
 scripts to do so, especially as the k3d api evolves. From-scratch cluster+registry creation is problematic

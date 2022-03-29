@@ -1,0 +1,39 @@
+# NOTE: adapted/updated from the Hausenblas' et al version, which was out of date wrt my kube version.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ats.cnat.programming-kubernetes.info
+spec:
+  group: cnat.programming-kubernetes.info
+  names:
+    kind: At
+    listKind: AtList
+    plural: ats
+    singular: at
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              command:
+                type: string
+              schedule:
+                type: string
+            type: object
+          status:
+            properties:
+              phase:
+                type: string
+            type: object

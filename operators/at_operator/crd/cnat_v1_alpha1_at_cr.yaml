@@ -1,0 +1,8 @@
+# NOTE: updated/adapted from Hausenblas' origin cnat CR.
+apiVersion: cnat.programming-kubernetes.info/v1
+kind: At
+metadata:
+  name: example-at
+spec:
+  schedule: "2019-04-14T09:39:00Z"
+  command: "echo YAY"

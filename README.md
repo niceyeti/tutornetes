@@ -12,18 +12,18 @@
 
 ## Soapbox
 
-Perhaps the most difficult part of learning Kubernetes and other CNCF technology is simply learning and configuring the many resources required to do so, whilst navigating materials polluted by professional self-promotion and linkedin-style clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude.
+Probably the most difficult part of learning Kubernetes and other CNCF technology is learning and configuring the many resources required to do so, while navigating materials polluted by self-promotion and pseudo-professional linkedin clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude.
 
 This repo provides a template for developing k8s clusters and cloud applications using k3d, helm, and tilt.
 The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc,
 and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
 to ensure your environment is consistent, then start modifying the base_cluster to rapidly prototype a new cluster, app, 
-chart, etc. The repo includes builtin chart/cluster scanning with kubescape to provide security linting. 
+chart, etc. The repo includes builtin chart/cluster scanning with kubescape to provide security linting.
 
-This repo's goals are pure learning and development:
+This repo's goals are pure research and development:
 1) the ability to design, develop, and spin-up clusters with different properties
 2) to rapidly design, develop and test cloud apps themselves
-3) to provide a learning environment, aka your own personal k8s playground
+3) to provide a learning environment, your own personal k8s playground
 4) minimal free-climbing: pushing quality concerns as far upstream in the development process as possible, with immediate development feedback and security/quality scanning.
 
 ## Repo Organization
@@ -45,6 +45,9 @@ The primary resources to understand are in the *base_cluster* folder:
 ## Pre-reqs
 Install docker, k3d, helm, tilt, and kubescape (optional). See version_info.txt for versions.
 
+## Updating and Maintenance
+* Updating k3d: after updating k3d and k3s, run `k3d config migrate k3d_config.yaml new_config.yaml` and review the new config, then commit it. The migration code itself can be reviewed in the k3d repo.
+
 ## Basic Workflow
 1) cd into *base_cluster*
 2) create a k3d-development cluster: `./up.sh --create`
@@ -53,7 +56,7 @@ Install docker, k3d, helm, tilt, and kubescape (optional). See version_info.txt 
     * view the nodes and registry: `docker container ls --all`
     * view the cluster running inside the nodes: `kubectl get pods -o wide --all-namespaces`
     * view host interfaces: `ifconfig`
-    * know the namespaces (or they will trip you up): `kubectl get namespaces`
+    * know the namespaces (otherwise they will trip you): `kubectl get namespaces`
 5) tilt up to run the go app:
     * `tilt up`, then open a browser
     * navigate to `localhost:10350`
@@ -66,13 +69,14 @@ I set this up to be run manually because it is easiest to maintain and I am unli
     * See: https://kubernetes.io/blog/2021/10/05/nsa-cisa-kubernetes-hardening-guidance/
 
 ## DevOps Resources
-When I decided to learn kubernetes I consciously committed to avoid online materials completely, and to instead learn solely from books. Those I found most useful:
+When learning kubernetes I consciously avoided online materials entirely and focused solely on books. Some I found most useful:
 1) [Kubernetes In Action](https://www.amazon.com/Kubernetes-Action-Marko-Luksa/dp/1617293725/)
 2) [Kubernetes Patterns](https://www.amazon.com/Kubernetes-Patterns-Designing-Cloud-Native-Applications/dp/1492050288/)
 3) [Design Patterns for Container-Based Distributed Systems](https://www.usenix.org/conference/hotcloud16/workshop-program/presentation/burns) (free and a quick read)
 4) [K3d](https://k3d.io/v5.1.0/): [quick tutorial](https://www.youtube.com/watch?v=mCesuGk-Fks)
 5) [Helm](https://helm.sh/docs/intro/quickstart/): [quick tutorial](https://www.youtube.com/watch?v=5_J7RWLLVeQ)
 6) [Tilt](https://tilt.dev/): [simple k3d tilt example](https://github.com/iwilltry42/k3d-demo/blob/main/Tiltfile)
+7) [Istio Up and Running](https://www.amazon.com/Istio-Running-Service-Connect-Control/dp/1492043788/)
 
 ## Credit
 This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, and kubernetes--and google as well. All credit for these tools goes to their authors. Seriously, thanks a ton! Those who teach instead of tell deserve utmost praise.

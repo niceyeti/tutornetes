@@ -1,0 +1,6 @@
+apiVersion: cnat.programming-kubernetes.info.example.com/v1
+kind: At
+metadata:
+  name: at-sample
+spec:
+  # Add fields here
