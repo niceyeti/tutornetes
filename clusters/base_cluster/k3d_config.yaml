@@ -3,13 +3,13 @@ apiVersion: k3d.io/v1alpha4
 metadata:
   name: devcluster
 servers: 1
-agents: 1
+agents: 2
 kubeAPI:
   hostIP: 127.0.0.1
   hostPort: "6445"
 image: rancher/k3s
 ports:
-- port: 8080:80
+- port: 8081:80
   nodeFilters:
   - loadbalancer
 options:
@@ -22,7 +22,11 @@ options:
     disableLoadbalancer: false
     disableImageVolume: false
     disableRollback: false
-  k3s: {}
+  k3s: # options passed on to K3s itself
+    extraArgs: # additional arguments passed to the `k3s server|agent` command; same as `--k3s-arg`
+      - arg: --no-deploy=traefik # disable traefik (when using istio)
+        nodeFilters:
+          - server:*
   kubeconfig:
     updateDefaultKubeconfig: true
     switchCurrentContext: true

@@ -4,6 +4,12 @@
 # Importantly, the properties of the liveness/readiness and minReadySeconds parameters
 # are just some default I used, and should be tuned conscientiously.
 
+system: i-dont-know-i-just-work-here
+version: 1
+
+podAnnotations:
+  some-annotation: dont-panic-be-happy
+
 deployment:
   fullname: "simple-go-app"
   replicaCount: 1
@@ -30,6 +36,68 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
+# Istio uses the service account name as a component of the service's security
+# identity. Set "create" to false to use an previously created service account.
+serviceAccount:
+  name: go-app-acct
+  create: true
+
+
+# Configure the Istio ingress gateway to route outside traffic for the provided
+# host name to this service on the ports and protocols defined in the 'ports' section 
+# above. 
+ingressGateway:
+  name: go-app-gateway
+  port: 80
+  portname: http
+  protocol: http
+  host: my.gateway.com
+  matchPrefix: 
+    - "/fortune"
+    - "/echo"
+    - "/health"
+    - "/app" # TODO: route to static app page
+
+
+# For Istio, the overall timeout for requests to this service.
+# Required.
+overallTimeout: 10s
+
+# Client retry settings (use Istio syntax)
+# Optional
+retries:
+  attempts: 3
+  perTryTimeout: 2s
+
+# Circuit breaker settings (use Istio syntax)
+# Optional
+outlierDetection: 
+  consecutive5xxErrors: 5
+
+# TODO: I have no plans on using one of these but would like to do so as an exercise,
+# mounting a config-map as a volume and observing how quickly it updates.
+configMap: # Optional
+  # Where the config map should be mounted inside your container's filesystem.
+  mountPath: /config/go-app-config
+  fileName: config.yaml
+  # Everything under content is copied verbatim into your service's configmap.
+  content:
+    key1: value1   # TBD: should these vals be quoted?
+    key2: value2
+
+service:
+  name: go-app-svc
+  type: "ClusterIP"
+  port: "80"
+  containerPort: 80 # TODO: make app read this from env
+  containerPortName: "http"
+  protocol: "TCP"
+  readiness:
+    periodSeconds: 10
+    initialDelaySeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
 
 #imagePullSecrets: []
 #nameOverride: ""
@@ -44,9 +112,7 @@ image:
 #  # If not set and create is true, a name is generated using the fullname template
 #  name: ""
 
-podAnnotations:
-  some-annotation: dont-panic-be-happy
-
+# TODO: implement security posture.
 #podSecurityContext: {}
   # fsGroup: 2000
 
@@ -58,23 +124,12 @@ podAnnotations:
   # runAsNonRoot: true
   # runAsUser: 1000
 
-service:
-  type: "ClusterIP"
-  port: "80"
-  containerPort: 80 # TODO: make the app read this from env
-  containerPortName: "http"
-  protocol: "TCP"
-  readiness:
-    periodSeconds: 10
-    initialDelaySeconds: 5
-    timeoutSeconds: 5
-    failureThreshold: 3
-    successThreshold: 1
 
 
-ingress:
-  annotations:
-    ingress.kubernetes.io/ssl-redirect: "false" # TODO: er what is this?
+# OBSOLETE. TODO: delete when istio succeeds.
+#ingress:
+#  annotations:
+#    ingress.kubernetes.io/ssl-redirect: "false" # TODO: er what is this?
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
 #  hosts:  # TODO: not used, hardcoded most ingress params in the template. Do some research on this field.

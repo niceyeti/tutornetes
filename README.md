@@ -68,7 +68,7 @@ I set this up to be run manually because it is easiest to maintain and I am unli
 
 ## Updating and Maintenance
 * Updating k3d: after updating k3d and k3s, run `k3d config migrate k3d_config.yaml new_config.yaml` and review the new config, then commit it. The migration code itself can be reviewed in the k3d repo.
-* Installing and updating istio: istio was installed using the installation directions [here](https://istio.io/latest/docs/setup/getting-started/). I installed it to the misc/ directory so the version is part of the repository, not the system.
+* Installing and updating istio: istio was installed using the installation directions [here](https://istio.io/latest/docs/setup/getting-started/). I installed it to the misc/ directory so the version is part of the repository, not the system. The istio folder contains many examples: web app, web sockets, operator, external access, and more.
     * Installation:
         * cd misc
         * curl -L https://istio.io/downloadIstio | sh -

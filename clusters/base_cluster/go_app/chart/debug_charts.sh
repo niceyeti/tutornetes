@@ -1,1 +1,1 @@
-helm template . --debug --values Values.yaml
+helm template . --debug --values values.yaml
