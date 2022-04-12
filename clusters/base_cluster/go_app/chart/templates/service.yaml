@@ -1,8 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  # TODO: it would be cleaner to derive service name from deployment name in values.yaml, then reference service name here, but this is fine.
-  name: {{ .Values.deployment.fullname }}
+  name: {{ .Values.service.name }}
 spec:
   type: {{ .Values.service.type }}
   ports:

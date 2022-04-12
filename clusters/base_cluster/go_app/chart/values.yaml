@@ -7,6 +7,8 @@
 system: i-dont-know-i-just-work-here
 version: 1
 
+# TODO: cleanup and minimize the chart and values. This is very messy.
+
 podAnnotations:
   some-annotation: dont-panic-be-happy
 
@@ -48,15 +50,15 @@ serviceAccount:
 # above. 
 ingressGateway:
   name: go-app-gateway
-  port: 80
+  port: 8083
   portname: http
   protocol: http
   host: my.gateway.com
-  matchPrefix: 
+  matchPrefix:
     - "/fortune"
     - "/echo"
     - "/health"
-    - "/app" # TODO: route to static app page
+    - "/app" # TODO: route to the static app page
 
 
 # For Istio, the overall timeout for requests to this service.

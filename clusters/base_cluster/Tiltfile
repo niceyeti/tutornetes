@@ -8,6 +8,23 @@ docker_build(
     dockerfile='./go_app/src/Dockerfile',
     only='./') # NOTE: 'only' is evaluated relative to the context parameter.
 
+
+# Build and deploy the tools container so it always exists, instead of manually.
+docker_build(
+    ref='devregistry:5000/dnsutils',
+    context='./tools_container/',
+    dockerfile='./tools_container/Dockerfile',
+    only='./') # NOTE: 'only' is evaluated relative to the context parameter.
+k8s_yaml(
+    helm(
+        './tools_container/chart', 
+        name='',
+        namespace='dev',
+        values=['./tools_container/chart/values.yaml']
+    )
+)
+
+
 # TODO (goal): install postgres chart
 
 

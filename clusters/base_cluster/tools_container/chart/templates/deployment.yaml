@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.fullname }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.deployment.fullname | lower | quote }}
+    app.kubernetes.io/part-of: "dev"
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  replicas: {{ .Values.deployment.replicaCount }}
+  minReadySeconds: {{ .Values.deployment.minReadySeconds }}
+  selector:
+    matchLabels:
+      {{- with .Values.deployment.selectorLabels }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:
+      annotations:
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        # Kubernetes recommended labels
+        app.kubernetes.io/name: {{ .Values.deployment.fullname | lower | quote }}
+        app.kubernetes.io/part-of: "dev"
+        app.kubernetes.io/version: "1.0"
+      {{- with .Values.deployment.selectorLabels }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: {{ .Values.deployment.fullname }}
+          image: "{{ .Values.image.repository }}/{{ .Values.image.image }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            periodSeconds: {{ .Values.deployment.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.deployment.liveness.timeoutSeconds }}
+            initialDelaySeconds: {{ .Values.deployment.liveness.initialDelaySeconds }}
+            failureThreshold: {{ .Values.deployment.liveness.failureThreshold }}
+            successThreshold: {{ .Values.deployment.liveness.successThreshold }}
+            exec:
+              command:
+              - cat
+              - /tmp/running

@@ -11,4 +11,4 @@ spec:
       name: {{ .Values.ingressGateway.portname }}
       protocol: {{ .Values.ingressGateway.protocol }}
     hosts:
-    - {{ .Values.ingressGateway.port }}
+    - "goapp.dev" # TODO: make 'hosts' a param here and in virtual service

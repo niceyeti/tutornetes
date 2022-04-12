@@ -9,9 +9,9 @@ metadata:
   namespace: {{ .Release.Namespace | quote }}
 spec:
   gateways:
-    - {{ .Values.ingressGateway.name | quote }} 
-  hosts:
-    - {{ .Values.ingressGateway.host | quote }}
+    - {{ .Values.ingressGateway.name | quote }}
+  hosts: # TODO: not sure what best practices are for 'hosts' here and in gw definition.
+    - "goapp.dev"
   http:
     - match:
 {{- range .Values.ingressGateway.matchPrefix }}

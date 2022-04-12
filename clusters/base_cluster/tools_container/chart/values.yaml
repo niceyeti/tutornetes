@@ -1,0 +1,24 @@
+podAnnotations:
+  description: "This container is solely for debugging network issues using kubectl, curl, etc."
+
+deployment:
+  fullname: "dns-tools"
+  replicaCount: 1
+  selectorLabels:
+    app: dns-tools
+    enabled: "true"
+  liveness:
+    periodSeconds: 30
+    initialDelaySeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 1
+    successThreshold: 1
+  minReadySeconds: 5
+
+image:
+  image: dnsutils
+  repository: devregistry:5000 
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
