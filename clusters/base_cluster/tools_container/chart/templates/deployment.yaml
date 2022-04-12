@@ -6,7 +6,6 @@ metadata:
     app.kubernetes.io/name: {{ .Values.deployment.fullname | lower | quote }}
     app.kubernetes.io/part-of: "dev"
     app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-  namespace: {{ .Release.Namespace | quote }}
 spec:
   replicas: {{ .Values.deployment.replicaCount }}
   minReadySeconds: {{ .Values.deployment.minReadySeconds }}
@@ -40,6 +39,16 @@ spec:
             initialDelaySeconds: {{ .Values.deployment.liveness.initialDelaySeconds }}
             failureThreshold: {{ .Values.deployment.liveness.failureThreshold }}
             successThreshold: {{ .Values.deployment.liveness.successThreshold }}
+            exec:
+              command:
+              - cat
+              - /tmp/running
+          readinessProbe:
+            periodSeconds: {{ .Values.deployment.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.deployment.readiness.timeoutSeconds }}
+            initialDelaySeconds: {{ .Values.deployment.readiness.initialDelaySeconds }}
+            failureThreshold: {{ .Values.deployment.readiness.failureThreshold }}
+            successThreshold: {{ .Values.deployment.readiness.successThreshold }}
             exec:
               command:
               - cat

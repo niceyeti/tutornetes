@@ -2,13 +2,19 @@ apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: {{ .Values.ingressGateway.name }}
+  namespace: {{ .Release.Namespace | quote }}
 spec:
   selector:
-    istio: ingressgateway # use istio default controller
+  # WARNING: in the doc/examples the ingress is named 'ingressgateway'.
+  # The correct name is found from the istio-ingress service: `kubectl get svc --all-namespaces`
+    istio: ingress # use istio default controller
   servers:
   - port:
       number: {{ .Values.ingressGateway.port }}
       name: {{ .Values.ingressGateway.portname }}
       protocol: {{ .Values.ingressGateway.protocol }}
     hosts:
-    - "goapp.dev" # TODO: make 'hosts' a param here and in virtual service
+    # TODO: this allows any virtual service to bind to the gateway; need to define this concretely.
+    #- "*" # TODO: define this 'hosts' a param here and in virtual service
+    #- {{ .Values.virtualService.host | quote }}
+    - "*"

@@ -13,6 +13,12 @@ deployment:
     timeoutSeconds: 5
     failureThreshold: 1
     successThreshold: 1
+  readiness:
+    periodSeconds: 30
+    initialDelaySeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 1
+    successThreshold: 1
   minReadySeconds: 5
 
 image:
@@ -21,4 +27,3 @@ image:
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
-

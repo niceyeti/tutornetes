@@ -49,3 +49,31 @@ DestinationRules are applied after VirtualServices and determine how requests ar
 ```
 DestinationRule defines policies that apply to traffic intended for a service after routing has occurred. These rules specify configuration for load balancing, connection pool size from the sidecar, and outlier detection settings to detect and evict unhealthy hosts (k8s services) from the load balancing pool.
 ```
+
+### Debugging Notes
+
+Ingress access: 
+* https://istio.io/latest/docs/tasks/traffic-management/ingress/ingress-control/#determining-the-ingress-ip-and-ports
+* `kubectl get svc istio-ingress -n istio-ingress`
+```
+export INGRESS_HOST=$(kubectl -n istio-ingress get service istio-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export INGRESS_PORT=$(kubectl -n istio-ingress get service istio-ingress -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
+export SECURE_INGRESS_PORT=$(kubectl -n istio-ingress get service istio-ingress -o jsonpath='{.spec.ports[?(@.name=="https")].port}')
+export TCP_INGRESS_PORT=$(kubectl -n istio-ingress get service istio-ingress -o jsonpath='{.spec.ports[?(@.name=="tcp")].port}')
+```
+
+Debugging:
+1. Examine the Gateway using the steps above.
+2. Verify the deployment internally to cluster:
+    * kubectl get svc -n dev
+    * kubectl exec [dns tools pod name] -n dev -- curl [go app svc name endpoint]
+
+
+Current sequence for verifying the entire network stack deployment are up:
+1. tilt up
+2. curl -H "Host: goapp.dev" 172.18.0.4:80/fortune
+3. curl -X POST -d "Hello" -v -H "Host: goapp.dev" 172.18.0.4:80/
+
+
+
+

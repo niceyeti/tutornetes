@@ -1,13 +1,13 @@
 # Default values for a simple go web app.
-# Note that this is very scratch/rough; the app definition below is just to serve
-# as a starting point for a typical service, with no extras (volumes, security, etc).
+# Note that this is very scratch/rough; the app definition below is to serve
+# as a starting point for a typical service, with few extras (volumes, security, etc).
 # Importantly, the properties of the liveness/readiness and minReadySeconds parameters
 # are just some default I used, and should be tuned conscientiously.
 
+# TODO: cleanup and minimize the chart and values. This is very messy.
+
 system: i-dont-know-i-just-work-here
 version: 1
-
-# TODO: cleanup and minimize the chart and values. This is very messy.
 
 podAnnotations:
   some-annotation: dont-panic-be-happy
@@ -44,16 +44,14 @@ serviceAccount:
   name: go-app-acct
   create: true
 
-
 # Configure the Istio ingress gateway to route outside traffic for the provided
 # host name to this service on the ports and protocols defined in the 'ports' section 
 # above. 
 ingressGateway:
   name: go-app-gateway
-  port: 8083
+  port: 80
   portname: http
   protocol: http
-  host: my.gateway.com
   matchPrefix:
     - "/fortune"
     - "/echo"
@@ -65,16 +63,18 @@ ingressGateway:
 # Required.
 overallTimeout: 10s
 
-# Client retry settings (use Istio syntax)
-# Optional
-retries:
-  attempts: 3
-  perTryTimeout: 2s
-
-# Circuit breaker settings (use Istio syntax)
-# Optional
-outlierDetection: 
-  consecutive5xxErrors: 5
+virtualService:
+  name: go-app-virtual-service
+  host: goapp.dev
+  # Client retry settings (use Istio syntax)
+  # Optional
+  retries:
+    attempts: 3
+    perTryTimeout: 2s
+  # Circuit breaker settings (use Istio syntax)
+  # Optional
+  outlierDetection: 
+    consecutive5xxErrors: 5
 
 # TODO: I have no plans on using one of these but would like to do so as an exercise,
 # mounting a config-map as a volume and observing how quickly it updates.
