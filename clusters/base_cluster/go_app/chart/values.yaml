@@ -28,8 +28,7 @@ deployment:
     failureThreshold: 3
     successThreshold: 1
   # Tolerance period to wait, after readiness succeeds, before forwarding traffic to deployed pods.
-  # TODO: experiment with this parameter.
-  minReadySeconds: 5
+  minReadySeconds: 1
 
 image:
   image: simple-go-app # TODO: consider renaming chart simple-go-app and using .Chart.name here; really, find out what others' convention is.
@@ -56,7 +55,7 @@ ingressGateway:
     - "/fortune"
     - "/echo"
     - "/health"
-    - "/app" # TODO: route to the static app page
+    - "/" # static app html page
 
 
 # For Istio, the overall timeout for requests to this service.

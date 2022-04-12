@@ -19,7 +19,7 @@ k8s_yaml(
 
 # Allows running kubescape cluster security scanning manually, via the tilt ui.
 # The point is simply to move security upstream, into the development loop.
-# The scanner scans the cluster from the host, assuming k3d has setup kubeconfig as required by kubescan to scan by the command below.
+# The scanner scans the cluster from the host, assuming k3d has setup kubeconfig as required by kubescan for the command below.
 # Security scanning is effectively just linting, and should be integrated into a build process as such.
 # Allowing the developer to run the scan manually is just easier to maintain/describe for this project.
 local_resource('cluster_security_scan', './scripts/run_cluster_security_scan.sh', trigger_mode=TRIGGER_MODE_MANUAL)

@@ -66,10 +66,10 @@ spec:
               port: {{ .Values.service.containerPortName }}
 {{- if .Values.configMap }}
           volumeMounts:
-            - name: {{ (print .Values.service.name "-config") | quote }}
+            - name: {{ (print .Values.deployment.fullname "-config") | quote }}
               mountPath: {{ .Values.configMap.mountPath | quote }}
       volumes:
-        - name: {{ (print .Values.service.name "-config") | quote }}
+        - name: {{ (print .Values.deployment.fullname "-config") | quote }}
           configMap:
-            name: {{ .Values.service.name | lower | quote }}
+            name: {{ .Values.deployment.fullname | lower | quote }}
 {{- end }}
