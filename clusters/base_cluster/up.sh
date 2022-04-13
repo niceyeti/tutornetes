@@ -33,7 +33,7 @@ function bail_if_cluster_exists() {
 
 function check_prereqs() {
     if [[ -z $(which helm) ]]; then 
-        echo "Helm must be installed (for istio et al), exiting..."
+        echo "Helm must be installed (for istio, et al), exiting..."
         exit
     fi
 }
@@ -41,7 +41,6 @@ function check_prereqs() {
 # Creates the cluster and all extended properties (helm charts, istio, etc.).
 # The latter could be broken out, but this is fine for now.
 function create() {
-
     check_prereqs
     bail_if_cluster_exists
 
@@ -83,7 +82,7 @@ function install_helm_charts() {
     helm repo update
 
     kubectl create namespace dev
-    # all apps deployed to the dev namespace will have Envoy
+    # all apps deployed to dev will have Envoy
     kubectl label namespace dev istio-injection=enabled
 
     # install the istio base chart, which is most of its control plane components.
@@ -96,6 +95,12 @@ function install_helm_charts() {
     kubectl create namespace istio-ingress
     kubectl label namespace istio-ingress istio-injection=enabled
     helm install istio-ingress istio/gateway -n istio-ingress --wait
+
+    # install prometheus and kiali; this is fragile and unsecure, so simply disable lines if not needed.
+    # I'm only adding it here by default since I'm actively playing with istio.
+    echo "Installing kiali and prometheus..."
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/kiali.yaml
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/prometheus.yaml
 }
 
 function pause() {
