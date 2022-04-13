@@ -1,3 +1,6 @@
+# VirtualServices operate on L7 information, mapping routes by prefix, cookie, etc.
+# VirtualServices bind to Gateways based on their selector and at least one-matching host;
+# a host can be listed in only one VirtualService, but a VirtualService may designate multiple hosts.
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:

@@ -37,10 +37,29 @@ https://codeburst.io/istio-by-example-5189edd043da
 
 ## Defs
 
+### Architecture
+Istio was previously multiple services, since consolidated into a monolith as `istiod`:
+* Envoy proxy: sidecar implements secure mTLS between services, retries, failover, health checks, etc., all of the data plane.
+* Istiod: the control plane.
+    * Pilot
+    * Citadel (certs and other secure data)
+    * Galley
+
 
 ### VirtualService
 
 Recall that K8s Service objects provide a stable network identity for a service via label selector: `app: my_app` and they map ports (a process-level abstraction). A VirtualService is a layer above a Service, and provides additional functionality such as routing, retries, or weighting (e.g. 90/10). VirtualService objects map to Service objects or subsets of Service objects via their `host` definition. Logically these operate as userspace proxies, though I don't know this is the case.
+
+The following rules apply:
+* VirtualServices (vs) may mention multiple hosts, but hosts (names) may exist in only one VirtualService.
+* The most specific host applies: if vs1 lists host "*.com" and vs2 lists "foo.com" then v2 will match first.
+* VirtualServices provide generalized responsibility decomposition: one vs can define the entry to other VirtualServices,
+and so on, as needed to divide team responsibilities for individual services.
+
+
+
+
+
 
 ### DestinationRule
 
