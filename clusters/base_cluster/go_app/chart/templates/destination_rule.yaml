@@ -1,3 +1,6 @@
+# DestinationRules define policies for a specific route: tls config, circuit breaking,
+# and load balancing. These features aren't needed by the go app, this is simply an example.
+
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:

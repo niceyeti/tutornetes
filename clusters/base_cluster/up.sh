@@ -72,7 +72,11 @@ function cluster_info() {
     kubectl get pods --all-namespaces
     echo ""
 
-    echo "WORKFLOW NOTE: when leaving/restoring the dev environment, avoid re-pulling images by using the '--pause' and '--restart' flags."
+    echo "*******************************************************************"
+    echo "WORKFLOW NOTE: when leaving/restoring the dev environment, avoid"
+    echo "avoid re-pulling images by using the '--pause' and '--restart' flags."
+    echo "*******************************************************************"
+    echo ""
 }
 
 function install_helm_charts() {
