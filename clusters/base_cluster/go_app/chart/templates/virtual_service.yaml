@@ -6,6 +6,7 @@ kind: VirtualService
 metadata:
   name: {{ .Values.virtualService.name | lower | quote }}
   labels:
+    # Istio-suggested labels
     app.kubernetes.io/name: {{ .Values.virtualService.name | lower | quote }}
     app.kubernetes.io/part-of: {{ .Values.system | quote }}
     app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
@@ -17,7 +18,7 @@ spec:
     - {{ .Values.virtualService.host | quote }}
   http:
     - match:
-{{- range .Values.ingressGateway.matchPrefix }}
+{{- range .Values.virtualService.matchPrefix }}
       - uri:
           prefix: {{ . | quote }}
 {{- end }}

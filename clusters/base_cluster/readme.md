@@ -4,6 +4,8 @@ The simple_app folder is a demo learning example for developing a kubernetes bas
 ## TODO
 1) Add secrets/https
 2) Add postgres chart
+3) Tracing and logging... in the well-worn tradition of under-investing in critical
+components, I probably won't add this in order to keep this repo barebones KISS.
 
 ## Steps to Run
 1) Start the k3d cluster and registry:

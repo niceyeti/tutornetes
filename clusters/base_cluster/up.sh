@@ -101,6 +101,9 @@ function install_helm_charts() {
     echo "Installing kiali and prometheus..."
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/kiali.yaml
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/prometheus.yaml
+    # To delete kiali and prometheus, simply use the delete verb per the above:
+    # kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/kiali.yaml
+    # kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/prometheus.yaml
 }
 
 function pause() {
