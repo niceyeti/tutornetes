@@ -2,6 +2,7 @@
 
 Istio is part of the extended cluster definition and needs to be managed at that level.
 Here this just means helm.
+
 Logically Istio is just a layer below microservices (transparent to them) for simplifying their implementation
 and separating infrastructure and routing concerns from microservices; in terms of implementation, this is done
 by injecting Envoy sidecars beside microservices (or as standalone ingress/egress), which consume configuration
@@ -25,7 +26,7 @@ All the rest are just extensions and advanced features: retries, egress, timeout
 $ kubectl api-resources -o wide | grep -i istio
 $ kubectl get virtualservices
 $ kubectl get destinationrules
-$ kubectl get gateway  
+$ kubectl get gateways
 ```
 
 ## Installation and Upgrading
@@ -57,8 +58,10 @@ Adding and running kiali and prometheus:
 * kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/kiali.yaml
 * kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/prometheus.yaml
 * Find the kiali service port: kubectl describe svc kiali -n istio-system
-* Find the kiali pod: kubectl get pods -n istio-system
-* Port forward to kiali: kubectl port-forward kiali-699f98c497-wsxv8 8085:20001 -n istio-system
+* Find the kiali pod:
+  * `kubectl get pods -n istio-system`
+* Port forward to kiali:
+  * `kubectl port-forward kiali-699f98c497-wsxv8 8085:20001 -n istio-system`
 * Open browser to localhost:8085 then navigate to the graph, set it up to display all namespaces, etc.
 * With the go app running, generate some metrics by hitting the app: `curl -H "Host: goapp.dev" 172.18.0.4:80/fortune`
 The requests should appear in the kiali graphical display.
@@ -76,8 +79,6 @@ https://codeburst.io/istio-by-example-5189edd043da
     * pros/cons
     * upgrading/updating responsibilities
     * gotchas: header forwarding requires code changes
-
-
 
 ## Defs
 
@@ -132,13 +133,17 @@ Debugging:
 2. Verify the deployment internally to cluster:
     * kubectl get svc -n dev
     * kubectl exec [dns tools pod name] -n dev -- curl [go app svc name endpoint]
-
+        * `kubectl exec dns-tools-76d7b69d7-rspbn -n dev -it -c dns-tools -- curl go-app-svc.dev.svc.cluster.local/fortune`
+        * `kubectl exec dns-tools-76d7b69d7-rspbn -n dev -it -c dns-tools -- curl go-app-svc/fortune`
+Note that these effers are configured with mtls by default, which can be viewed in kiali (look for the lock symbol on edges). So even though curl addresses the k8s service, the request passes through Envoy, thus
+tracing the request and implementing mtls transparently.
 
 Current sequence for verifying the entire network stack deployment are up:
 0. kubectl get svc istio-ingress -n istio-ingress
 1. tilt up
 2. Using the ip from (0): curl -H "Host: goapp.dev" 172.18.0.4:80/fortune
 3. curl -X POST -d "Hello" -v -H "Host: goapp.dev" 172.18.0.4:80/
+4. kubectl exec [dns tools pod] -n dev -- curl -v go-app-svc/fortune
 
 ## Istio Course Notes
 
@@ -416,6 +421,11 @@ Istio allows two kinds of upgrading:
     * istioctl upgrade
 
 Gotchas:
+* The famous sidecar bug: Envoy sidecars are not guaranteed to start before app containers, often causing 
+issues when apps expect some resource to be ready.
+  * Resolution: set `values.proxy.holdApplicationUntilProxyStarts`
+* You cannot curl VirtualServices from other apps, since VirtualServices do not create DNS entries. Think simply,
+and instead curl the k8s service directly.
 * The istioctl tool is versioned, so this process also involves selecting the istioctl version, e.g. istioctl17
 for the 1.7 tool. Just be aware of this as a task.
 * Pods, and in turn the Envoy proxy sidecars, are immutable, so upgrading requires restarting pods to get new proxies.

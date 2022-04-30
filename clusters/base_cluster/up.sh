@@ -100,6 +100,9 @@ function install_helm_charts() {
     kubectl label namespace istio-ingress istio-injection=enabled
     helm install istio-ingress istio/gateway -n istio-ingress --wait
 
+    # Required to ensure that Envoy sidecars start before app containers. This should occur by default--but its snot.
+    # istioctl install --set meshConfig.defaultConfig.holdApplicationUntilProxyStarts=true
+
     # install prometheus and kiali; this is fragile and unsecure, so simply disable lines if not needed.
     # I'm only adding it here by default since I'm actively playing with istio.
     echo "Installing kiali and prometheus..."
