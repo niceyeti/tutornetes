@@ -1,0 +1,35 @@
+# An example role and binding to allow querying the api-server for pods.
+# Since this specifies a user defined elsewhere (the go app), the namespaces
+# and users specified here are sure to become invalid/obsolete; just use
+# this as an example, assuming they exist.
+#
+# NOTE: this scope is too lax for anything but playing and learning. The 
+# proper way to configure roles/bindings is via least-privilege, not most!
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: unsecured-pod-reader
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["pods","services"]
+  verbs: ["get", "watch", "list"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: unsecured-pod-reader-example
+subjects:
+- kind: ServiceAccount
+  name: go-app-acct
+  namespace: dev
+- kind: ServiceAccount
+  name: default
+  namespace: dev
+roleRef:
+  kind: ClusterRole
+  name: unsecured-pod-reader
+  apiGroup: rbac.authorization.k8s.io
+

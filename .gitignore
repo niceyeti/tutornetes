@@ -1,3 +1,5 @@
 misc/istio-1.13.2/*
 !misc/istio-1.13.2/manifest.yaml
+misc/istio-1.13.3/*
+!misc/istio-1.13.3/manifest.yaml
 **/.kubescape/
