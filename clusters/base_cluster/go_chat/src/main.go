@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 
 	"github.com/gorilla/mux"
 )
@@ -38,17 +37,6 @@ func EchoHandler(w http.ResponseWriter, r *http.Request) {
 
 	b = append(b, "\n"...)
 	w.Write(b)
-}
-
-func FortuneHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Fortune hit")
-	w.Header().Set("Content-Type", "text/plain")
-	cmd := exec.Command("fortune")
-	cmd.Stdout = w // this is efficient, but should determine any command errors before writing. this will write arbitrary failure data when non-200 responses are returned.
-	if err := cmd.Run(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 }
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,8 +1,6 @@
 FROM golang:1.18-alpine
 
 RUN mkdir /app
-RUN mkdir /app/static
-RUN apk add --no-cache fortune
 
 ADD . /app
 WORKDIR /app

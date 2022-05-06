@@ -1,0 +1,66 @@
+<html>
+
+<body>
+    <!-- dynamic message content -->
+    <input type="text" id="message" />
+
+    <!-- trigger to initiate the send -->
+    <input type="button" value="Send" id="send" />
+
+    <!-- container to display received messages -->
+    <ul id="messages">
+    </ul>
+    <script src="signalr.js"></script>
+    <script>
+        (async function () {
+            // 2. use the signalr.HubConnectionBuilder to build a hub connection
+            //    and point it at the baseurl which you configured in your mux
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl('/chat')
+                .build();
+
+            // 3. bind events:
+            //    - UI events can invoke (i.e. dispatch to) functions on the server hub
+            document.getElementById('send').addEventListener('click', sendClicked);
+            //    - connection events can handle messages received from the server hub
+            connection.on('chatMessageReceived', onChatMessageReceived);
+
+            // 4. call start to initiate the connection and start streaming events
+            //    between your server hub and your client connection
+            connection.start();
+
+            // that's it! your server and client should be able to communicate
+            // through the signalr.Hub <--> connection pipeline managed by the
+            // signalr package and client-side library.
+
+            // --------------------------------------------------------------------
+
+            // example UI event handler
+            function sendClicked() {
+                // prepare your target payload
+                const msg = document.getElementById('message').value;
+                if (msg) {
+                    // call invoke on your connection object to dispatch
+                    // messages to the server hub with two arguments:
+                    // -  target: name of the hub func to invoke
+                    // - payload: the message body
+                    const target = 'sendChatMessage';
+                    connection.invoke(target, msg);
+                }
+            }
+
+            // example server event handler
+            function onChatMessageReceived(payload) {
+                // the payload is whatever was passed to the inner
+                // clients' `Send(...)` method in your server-side
+                // hub function.
+
+                const li = document.createElement('li');
+                li.innerText = payload;
+                document.getElementById('messages').appendChild(li);
+            }
+        })();
+    </script>
+</body>
+
+</html>

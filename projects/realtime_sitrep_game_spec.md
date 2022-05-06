@@ -94,4 +94,8 @@ to a login page when unauthorized.
     * Recall we faced exactly these reqs at S**: edge monitors, device trust (writable airgapped devices), etc.
   * The client-side app headwinds are strong (Electron, etc) and coordinating multiple client-side services is a challenge. By contrast, browser-based pure-client web apps are simple, users simply trust the host company (lol).
 
-  
+
+
+
+
+
