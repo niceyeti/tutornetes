@@ -14,7 +14,7 @@
 
 Probably the most difficult part of learning Kubernetes and other CNCF technology is learning and configuring the many resources required to do so, while navigating materials polluted by self-promotion and pseudo-professional linkedin clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude.
 
-This repo provides a template for developing k8s clusters and cloud applications using k3d, helm, and tilt.
+This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt.
 The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc,
 and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
 to ensure your environment is consistent, then start modifying the base_cluster to rapidly prototype a new cluster, app, 

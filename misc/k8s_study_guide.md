@@ -19,6 +19,7 @@ Alias kubectl as:
 Show all of the api-resources and CRDs:
 * `kubectl api-resources`
 * `kubectl explain deployment`
+* most commands have a '-h' option as well
 
 ## Dry-run
 Use dry-run to create starter yaml as follows:
@@ -94,4 +95,12 @@ the api server. The api-server location params are provided as env vars to every
     * As one-liner:
         * `CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt; TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token); curl -v --cacert $CA_CERT -H "Authorization: Bearer $TOKEN" https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/dev/pods`
     * Note: interacting with the api-server requires configuring roles/role-bindings to allow specific users to CRUD object
-    
+* Use `expose` to create Services on the fly, again purely for debugging:
+  * `kubectl expose pod simple-go-app-64b5c755fc-fkwwx -n dev --port=4444 --target-port=80 --name=my-awesome-svc`
+  * This service may then be curl'ed from another container:
+    * `kubectl exec -it -n dev dns-tools-1234 -- /bin/sh`
+    * `# curl my-awesome-svc.default.cluster.local:4444/fortune`
+
+
+
+
