@@ -83,7 +83,7 @@ When learning kubernetes I consciously avoided online materials entirely and foc
 5) [Helm](https://helm.sh/docs/intro/quickstart/): [quick tutorial](https://www.youtube.com/watch?v=5_J7RWLLVeQ)
 6) [Tilt](https://tilt.dev/): [simple k3d tilt example](https://github.com/iwilltry42/k3d-demo/blob/main/Tiltfile)
 7) [Istio Up and Running](https://www.amazon.com/Istio-Running-Service-Connect-Control/dp/1492043788/)
-8) [CLoud Native Go](https://www.amazon.com/Cloud-Native-Go-Unreliable-Environments/dp/1492076333) (A Golang-specific book, but nonetheless a terrific resource on general architecture and problems)
+8) [Cloud Native Go](https://www.amazon.com/Cloud-Native-Go-Unreliable-Environments/dp/1492076333) (A Golang-specific book, but nonetheless a terrific resource on general architecture and problems)
 
 
 ## Credit
