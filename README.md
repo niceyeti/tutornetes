@@ -12,13 +12,11 @@
 
 ## Soapbox
 
-Probably the most difficult part of learning Kubernetes and other CNCF technology is learning and configuring the many resources required to do so, while navigating materials polluted by self-promotion and pseudo-professional linkedin clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude.
+Perhaps the most difficult part of learning Kubernetes and other CNCF technology is learning and configuring the many resources required, while navigating materials polluted by self-promotion and LinkedIn clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude. On the other hand, learning 'all' of DevSecOps is such a rapidly moving target, and an overly idealistic goal for any engineering budget, that maybe a flexible dev/learning environment and a positive attitude toward learning is the best we can do.
 
 This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt.
-The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc,
-and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
-to ensure your environment is consistent, then start modifying the base_cluster to rapidly prototype a new cluster, app, 
-chart, etc. The repo includes builtin chart/cluster scanning with kubescape to provide security linting.
+The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc, and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
+to ensure your environment is consistent, then start modifying the base_cluster to rapidly prototype a new cluster, app, chart, etc. The repo includes builtin chart/cluster scanning with kubescape to provide security linting.
 
 This repo's goals are pure research and development:
 1) the ability to design, develop, and spin-up clusters with different properties
@@ -85,9 +83,11 @@ When learning kubernetes I consciously avoided online materials entirely and foc
 5) [Helm](https://helm.sh/docs/intro/quickstart/): [quick tutorial](https://www.youtube.com/watch?v=5_J7RWLLVeQ)
 6) [Tilt](https://tilt.dev/): [simple k3d tilt example](https://github.com/iwilltry42/k3d-demo/blob/main/Tiltfile)
 7) [Istio Up and Running](https://www.amazon.com/Istio-Running-Service-Connect-Control/dp/1492043788/)
+8) [CLoud Native Go](https://www.amazon.com/Cloud-Native-Go-Unreliable-Environments/dp/1492076333) (A Golang-specific book, but nonetheless a terrific resource on general architecture and problems)
+
 
 ## Credit
-This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, and kubernetes--and google as well. All credit for these tools goes to their authors. Seriously, thanks a ton! Those who teach instead of tell deserve utmost praise.
+This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, istio, and kubernetes--and google as well. All credit for these technologies goes to their authors, with sincere thanks. We stand kittens on the shoulders of giants and call ourselves lions, lol. Those who teach instead of tell deserve utmost praise.
 
 Some very helpful teachers:
 * https://www.youtube.com/c/MarcelDempers

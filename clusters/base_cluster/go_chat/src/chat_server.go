@@ -10,17 +10,30 @@ import (
 
 	kitlog "github.com/go-kit/log"
 	"github.com/philippseith/signalr"
+	"github.com/philippseith/signalr/chatsample/public"
 )
 
 type chatHub struct {
 	signalr.Hub
 }
 
+func (h *chatHub) SendChatMessage(message string) {
+	h.Clients().All().Send("chatMessageReceived", message)
+}
+
+func (c *chatHub) OnConnected(connectionID string) {
+	fmt.Printf("%s connected\n", connectionID)
+}
+
+func (c *chatHub) OnDisconnected(connectionID string) {
+	fmt.Printf("%s disconnected\n", connectionID)
+}
+
 func runHTTPServer() {
-	address := `127.0.0.1:80`
+	address := `127.0.0.1:8888`
 
 	// create an instance of your hub
-	hub := chatHub{}
+	hub := &chatHub{}
 
 	// build a signalr.Server using your hub
 	// and any server options you may need
@@ -43,8 +56,8 @@ func runHTTPServer() {
 	// of doing that using a local `public` package
 	// which was created with the go:embed directive
 	//
-	// fmt.Printf("Serving static content from the embedded filesystem\n")
-	// router.Handle("/", http.FileServer(http.FS(public.FS)))
+	fmt.Printf("Serving static content from the embedded filesystem\n")
+	router.Handle("/", http.FileServer(http.FS(public.FS)))
 
 	// bind your mux to a given address and start handling requests
 	fmt.Printf("Listening for websocket connections on http://%s\n", address)
