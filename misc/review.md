@@ -8,7 +8,7 @@ DNS provides stable naming conventions for services within a network: name -> IP
 DNS forms a tree/hierarchy, starting with the root zone, and proceeding down to individual IPs and subzones.
 The most important aspect of DNS in one's cluster is simply being aware of its implementation: trust boundaries,
 what DNS servers are operating, and how clients are configured to use it. In vanilla pod containers, this is
-usually in /etc/resolv.conf, though ISTIO surely has a more featured implementation in the sidecar.
+usually in /etc/resolv.conf, though ISTIO surely has a more featured implementation in the Enovy sidecar.
 
 ### Record types
 1. A/AAAA: the most common type, mapping a name to a specific ip address.
@@ -42,7 +42,7 @@ For example a forward lookup for 'example.com' may return 192.0.1.2, for which
 the reverse lookup PTR name would be '2.1.0.192.in-addr.arpa.'
 
 Security posture:
-* Hosts are configured via /etc/resolv.conf for instance
+* Hosts are configured via /etc/resolv.conf
 * Hosts' domains are registered, allowing them to be looked up using reverse DNS
 * Traceroute uses PTR records to work and display hosts
 * Both forward and reverse records are required for many internal network functionalities: spam checking emails,
@@ -73,12 +73,13 @@ PKI: entails key distribution and maintenance for verification of RRSIG entries.
 
 
 # X509
-Binds an identity (hostname, organization, or individual) to a public key using a digital signature from some other authority (unless self-signed).
+Binds an identity (hostname, organization, or individual) to a public key using a digital signature from some other authority (unless self-signed),
+as well as a duration.
 Certs contain: version number, serial number, issuer name, validity period (not before, not after), subject name, subject public key and algorithm, cert signature and algorithm.
 
 ### Generation
 openssl genrsa -aes128 -out privkey.pem 2048
-openssl req -new -x509 -key privkey.pem -days 365 -subj "/C=US/ST=CA/O=Acme, Inc./CN=example.com"
+openssl req -new -x509 -key privkey.pem -out https.cert -days 365 -subj "/C=US/ST=CA/O=Acme, Inc./CN=example.com"
 
 
 

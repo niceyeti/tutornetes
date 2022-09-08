@@ -86,7 +86,7 @@ function install_helm_charts() {
     helm repo update
 
     kubectl create namespace dev
-    # all apps deployed to dev will have Envoy
+    # all apps deployed to dev will have Envoy sidecars
     kubectl label namespace dev istio-injection=enabled
 
     # install the istio base chart, which is most of its control plane components.

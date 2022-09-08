@@ -53,7 +53,7 @@ Use while loops to demo issues:
 
 
 # Pod definitions
-k create pod my-pod --image=busybox --restart=Never --command 
+k create pod my-pod --image=busybox --restart=Never --command env
 
 
 
