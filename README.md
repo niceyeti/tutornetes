@@ -12,13 +12,13 @@
 
 ## Soapbox
 
-Perhaps the most difficult part of learning Kubernetes and other CNCF technology is learning and configuring the many resources required, while navigating materials polluted by self-promotion and LinkedIn clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude. On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
+Perhaps the most difficult part of learning Kubernetes and individual CNCF components is learning and configuring the many resources required. You try to dip your foot into one area, and get swept away by the sea! On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
 
 This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt.
 The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc, and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
 to ensure your environment is consistent, then start modifying the base_cluster to rapidly prototype a new cluster, app, chart, etc. The repo includes builtin chart/cluster scanning with kubescape to provide security linting.
 
-This repo's goals are pure research and development:
+This repo's goals are pure dev research and training:
 1) the ability to design, develop, and spin-up clusters with different properties
 2) to rapidly design, develop and test cloud apps themselves
 3) to provide a learning environment, your own personal k8s playground
@@ -90,7 +90,9 @@ When learning kubernetes I consciously avoided online materials entirely and foc
 
 
 ## Credit
-This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, istio, and kubernetes--and google as well. All credit for these technologies goes to their authors, with sincere thanks. We stand kittens on the shoulders of giants and call ourselves lions, lol. Those who teach instead of tell deserve utmost praise.
+This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, istio, and kubernetes--and much of google's work as well. 
+Any copyright/license issues (cloud-native source licenses are prone to 'upgrade') are unintentional, and this repo is for non-commercial use.
+All credit for these technologies goes to their authors, with sincere thanks.  We stand kittens on the shoulders of giants and call ourselves lions, lol. Those who teach instead of tell deserve utmost praise.
 
 Some very helpful teachers:
 * https://www.youtube.com/c/MarcelDempers
