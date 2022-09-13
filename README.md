@@ -12,7 +12,7 @@
 
 ## Soapbox
 
-Perhaps the most difficult part of learning Kubernetes and other CNCF technology is learning and configuring the many resources required, while navigating materials polluted by self-promotion and LinkedIn clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude. On the other hand, learning 'all' of DevSecOps is such a rapidly moving target, and an overly idealistic goal for any engineering budget, that maybe a flexible dev/learning environment and a positive attitude toward learning is the best we can do.
+Perhaps the most difficult part of learning Kubernetes and other CNCF technology is learning and configuring the many resources required, while navigating materials polluted by self-promotion and LinkedIn clickbait. Many organizations simply don't want to learn, nor invest the time/resources required, but instead drive up their technical debt via a code-first-ask-questions-later attitude. On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
 
 This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt.
 The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc, and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
@@ -44,6 +44,9 @@ The primary resources to understand are in the *base_cluster* folder:
 Install docker, k3d, helm, tilt, kubescape (optional), and istio (if used). See version_info.txt for versions.
 
 ## Basic Workflow
+
+Note: these steps are performed on the host machine, as I haven't fully containerized the dev environment, and most likely won't do so due to its size and volatile dependencies.
+
 1) cd into *base_cluster*
 2) create a k3d-development cluster: `./up.sh --create`
 3) wait for cluster creation to complete: `kubectl get pods --all-namespaces`. It may take a few minutes to initially pull and install the cluster images (k3s, traefik, etc); pods will be shown as "ContainerCreating"; the cluster is ready when all pods show "Running" or "Completed".
