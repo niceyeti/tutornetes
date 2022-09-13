@@ -2,6 +2,8 @@ module github.com/niceyeti/tutornetes/clusters/base_cluster/go_webhook_example/s
 
 go 1.19
 
+require k8s.io/api v0.25.0
+
 require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -13,7 +15,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.25.0 // indirect
 	k8s.io/apimachinery v0.25.0 // indirect
 	k8s.io/klog/v2 v2.70.1 // indirect
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
