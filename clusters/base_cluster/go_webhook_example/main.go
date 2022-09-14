@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/niceyeti/tutornetes/clusters/base_cluster/go_webhook_example/src/mutator"
+	"go_webhook_example/src/mutator"
 
 	admissionv1 "k8s.io/api/admission/v1"
 )
