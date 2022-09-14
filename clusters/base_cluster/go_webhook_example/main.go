@@ -52,10 +52,25 @@ func ServeMutatePods(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mt := mutator.PodMutator{
-		Request: in,
+		Request: in.Request,
 	}
 
-	mt.Mutate()
+	out, err := mt.Mutate()
+	if err != nil {
+		e := fmt.Errorf("could not generate admission response: %v", err)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	jout, err := json.Marshal(out)
+	if err != nil {
+		e := fmt.Errorf("could not parse admission response: %v", err)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "%s", jout)
 }
 
 func parseRequest(r *http.Request) (*admissionv1.AdmissionReview, error) {

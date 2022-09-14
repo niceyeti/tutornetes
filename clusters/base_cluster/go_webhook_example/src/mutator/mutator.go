@@ -19,6 +19,7 @@ type PodMutator struct {
 	Request *admissionv1.AdmissionRequest
 }
 
+// Mutate
 func (pm *PodMutator) Mutate() (*admissionv1.AdmissionReview, error) {
 	pod, err := pm.Pod()
 	if err != nil {
@@ -30,7 +31,6 @@ func (pm *PodMutator) Mutate() (*admissionv1.AdmissionReview, error) {
 		return nil, fmt.Errorf("could not mutate pod: %v", err)
 	}
 
-	// generate json patch
 	patch, err := jsondiff.Compare(pod, mutatedPod)
 	if err != nil {
 		return nil, err
