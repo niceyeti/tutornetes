@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	// TODO: try this https://go.googlesource.com/tools/+/refs/heads/master/gopls/doc/workspace.md
 	"go_webhook_example/src/mutator"
 
 	admissionv1 "k8s.io/api/admission/v1"

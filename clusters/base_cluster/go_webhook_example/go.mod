@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/wI2L/jsondiff v0.2.0
-	k8s.io/api v0.25.0
-	k8s.io/apimachinery v0.25.0
+	k8s.io/api v0.25.1
+	k8s.io/apimachinery v0.25.1
 )
 
 require (

@@ -21,7 +21,10 @@
     // Set *default* container specific settings.json values on container create.
     "settings": {
         "go.toolsManagement.checkForUpdates": "local",
-        "go.useLanguageServer": true
+        "go.useLanguageServer": true,
+        "gopls": {
+            "build.experimentalWorkspaceModule": true
+        }
     },
     // Add the IDs of extensions you want installed when the container is created.
     "extensions": [
