@@ -9,9 +9,9 @@ COPY . /work
 
 # Build mutation-webhook
 RUN --mount=type=cache,target=/root/.cache/go-build,sharing=private \
-    go build -o src/mutation-webhook .
+  go build -o bin/mutation-webhook .
 
-# ---
+# --- Copy from build container
 FROM scratch AS run
 
 COPY --from=build /work/bin/ /usr/local/bin/

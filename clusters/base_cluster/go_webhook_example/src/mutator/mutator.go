@@ -15,13 +15,16 @@ import (
 // PodMutator takes an admission request and mutates the pods within it.
 // This is a just a simplified version of the more complete webhook example from Slack:
 // https://github.com/slackhq/simple-kubernetes-webhook/blob/main/pkg/mutation/inject_env.go
+// This version is a cattywampus minimal implementation, no thought to encapsulation or responsibilities.
+// FWIW, other examples provide better examples of how admission-review code may be generalized to
+// fit ones use-case.
 type PodMutator struct {
 	Request *admissionv1.AdmissionRequest
 }
 
 // Mutate
 func (pm *PodMutator) Mutate() (*admissionv1.AdmissionReview, error) {
-	pod, err := pm.Pod()
+	pod, err := pm.pod()
 	if err != nil {
 		return nil, fmt.Errorf("could not parse pod in admission review request: %v", err)
 	}
@@ -50,9 +53,9 @@ func (pm *PodMutator) Mutate() (*admissionv1.AdmissionReview, error) {
 }
 
 // Pod extracts a pod from an admission request
-func (pm *PodMutator) Pod() (*corev1.Pod, error) {
+func (pm *PodMutator) pod() (*corev1.Pod, error) {
 	if pm.Request.Kind.Kind != "Pod" {
-		return nil, fmt.Errorf("only pods are supported here")
+		return nil, fmt.Errorf("kind must be pod but received " + pm.Request.Kind.Kind)
 	}
 
 	p := corev1.Pod{}
@@ -70,6 +73,8 @@ func (pm *PodMutator) mutatePod(inpod *corev1.Pod) (*corev1.Pod, error) {
 
 	// Your code here: modify the pod (add a sidecar container, resource limits, security stuff, etc)
 	// Currently this just echoes the pod without modifications.
+
+	// injectSidecar(pod)
 
 	// Confirm the hook has been called by printing the logs for the hook container
 	fmt.Println("Hit webhook!")

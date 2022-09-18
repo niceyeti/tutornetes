@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: simple-webhook-tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVTXFHT3hGSGdYRExPZ3ZLK2FPYmpYUEFGbXhjd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xkMlZpYUc5dmF5NWtaWFl3SGhjTk1qSXdPVEU0TWpJMU9URTVXaGNOTWpNdwpPVEU0TWpJMU9URTVXakFXTVJRd0VnWURWUVFEREF0M1pXSm9iMjlyTG1SbGRqQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFLbHZMTnU5WUVnamQwUVRWdDFhbFk2WmY2THc0eVZ2d2hmNmFReUQKbUMyS0w3S1NhRlRpd3RsSC9xbDR0RWJOcExQM20vS3ZENnNXa1dKcWExNVFRNnJYeVYyam9RTlk0YkhXL1hvVApLTlB6WnhWUHk4TlNHeHBXZ3VpUXdQV0RLMGVsT3drcEh2bnk1SFFGYzFvK0RZcGRpakloQmVqbTFvMzhVT01BCnB1R2FLUXo1MWdZZk5CSkd1a3Uwb0haZW1LNmg5VXRDNU5ITG5EZzBnUkUwSHRGVG8yS25MQkFiVWpYdmVrY2MKNlRzSWR2M1ptYlBEbzNzbWtVbXVGM1ViTEN1YmErVHM1Z1JxUkM4TFNjWm5tTndqR1lKT2FtU3RYM2k0RXZMRAp6SGxFV1pydTBtdTYvV0ltUHV6SlNvQTlWS2pEWFJUbnI5NnZQWGNBbXhndUp1c0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk5ENE5RbmRueGM4VitWb1dRWEN1L3RqbzI1Nk1COEdBMVVkSXdRWU1CYUFGTkQ0TlFuZG54YzgKVitWb1dRWEN1L3RqbzI1Nk1BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBQ0gvb21QREkyazhkZkR2SFl6TnNObzRyM1JERXEzRExmcUs0aW5UaDUxTEdPWmFUdnVRMnVPK0kvQlhiV3UxCk1UYkczUE5QMXI2S0Y3T1dCT1NsS0p0Q2NDUlZ5MGpDNXBocGJYelFGd2NkMDRSYVVEUGlxVzNDQVlKL0Q5YlQKVTF1YkRYai9kR2NTb0NxTzdKVFg3MmdHc01sc1VWSlJNS1daaFVjbVdQS05SSUJWQnBwQk1vMDZkbjRFa1RWKwpQQWVlTEVweXhNSTAzWThIU3BXUk9Ralc0YWEwQlBkdmxFL1RqTXZJQXorUEtKaDBJQlR1L1BsOFpTQzMxSzEvClVTaW56d1hBQlVvUUxPbkVCSlk2bHFmVUxrZmFaRnZYUUlybHoyMnkreW9QdEJHcisxNVQ4Mmt2dTYrd3ZRaysKYzFVeXJPME41V3cxR005L0IvREE5bnc9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb2dJQkFBS0NBUUVBcVc4czI3MWdTQ04zUkJOVzNWcVZqcGwvb3ZEakpXL0NGL3BwRElPWUxZb3ZzcEpvClZPTEMyVWYrcVhpMFJzMmtzL2ViOHE4UHF4YVJZbXByWGxCRHF0ZkpYYU9oQTFqaHNkYjllaE1vMC9ObkZVL0wKdzFJYkdsYUM2SkRBOVlNclI2VTdDU2tlK2ZMa2RBVnpXajROaWwyS01pRUY2T2JXamZ4UTR3Q200Wm9wRFBuVwpCaDgwRWthNlM3U2dkbDZZcnFIMVMwTGswY3VjT0RTQkVUUWUwVk9qWXFjc0VCdFNOZTk2Unh6cE93aDIvZG1aCnM4T2pleWFSU2E0WGRSc3NLNXRyNU96bUJHcEVMd3RKeG1lWTNDTVpnazVxWksxZmVMZ1M4c1BNZVVSWm11N1MKYTdyOVlpWSs3TWxLZ0QxVXFNTmRGT2V2M3E4OWR3Q2JHQzRtNndJREFRQUJBb0lCQUVKRnJBUWZKS1BTeTNtagpIdHpoNjVHbFZKbEZJM09uTFFIMy9sTFl2aE5CODdvakxnL1Z5bVQybGhOdmxRUUV0NkYwL2xpRVJOcWtyeVVSCmZ3R2EzM3paZm5mVDRzek9YU2tVY0h6cE5aVUJwWlplYWRMeU1JdXl2dTE4Z1IwR3UwMEF3Z0NwUnVaNUxRWjgKZzB3TzdYanJjWHgrRWpPdzVzY09wQXpHV24vdkMzT29IbkY0bzgzL0NJWUpqSmJYZ2NYMTFVUFpZc0wrMmIrNApycTB2T2VGNzFHMm45VDNrWFU4amJxV25ycXA1Rkd2TGFONEJ1R0xpZDIwampxcFdZZEMzVmtxcEVqKzVMOUw5CjQwNzAyOWFOL3NLVkovWndWK2Y5K1dmRURMSzZVeDdIVGdnOS80SUhVSzdoWi91WU1RWWdQUVI4NjNFelA5bmYKR1lTM2xkRUNnWUVBMnRVK0JqS0wvYjM3OGtrcHIrbW84UUp4bkoyN2hDVFZXU3JiaHpHbDNVeEFUODJxZnVvUApJZUpZZXpXZWs5MXFiTisvNUpwL1dpeTYvOUR3WVlIZExXWjluYzlzbFV2K2hMeUduRkIrV0szWldkWDdWeGJpCkFUYUk2L0xDRWpoakZndm5ic1dkTlN3cTZ1M0dyU20zNkdRS2RDWHFUbHZML1NFQ3Y0d1dkRWNDZ1lFQXhqWVoKb0ZCTWJ2ZTZCMEZXcnNzR253eWxDZ2FHTEZKRUs4Yi9Kc0ZHNFV6dTFmbFVjMmdremRlZ2hwNFFRYVo3clJ6RApqaUxqV2VYelRndU9aVUlsbXlhOE9YczdoSUR3c2grTkpMR2NOSUNQZTZOQjVJek93cDh6ckNBMW5TOHNXSC8yCjhXZTRDaW02MDUvcVpldnJ4K0l6VmZ0QkRUM3p6SCtnZDczYS9qMENnWUJvVjc5Z1V4Ky9HS1NXalY0c085ekwKTm1BWHpub0g4MHdyWFMwWjFJbUM4SVhGeDRvaFE5ZDlUNkRpOXRrckppdEZ5SmFHR1VqYUpYUHc0SjZOejg4MwpnNlFuNkN5ZEw0UW5wSUVHN2JhZzhCd3dJc0RhY05YSXdFa2ZRRHhiVmJtaFhJRzRwczlqK0RCcW5uL2FONGN5CmJ1a3hJcGNMVCtmL1JZczY3RUFVcHdLQmdIRUVOK2hvNEt3RkpGVXV0RFpHSFNoakZWZDZFTmNFc1VvazFTZEwKM1JacHYyVFNIWTBRUEt3QjNzM2pJbkhNYzRocGRqZDlQUlR0UUtXbmdUSExYWlh4cURFK1N0bHFpOU9FbWYzcQpKNTdvRHVmNFZvSHlwNUhoSkoxb1lDbVgxRGxCL1pQNEI4QUR1enNmVzQ5eHphYlRHMkpUT094TC9zOERsb093CkJVWWhBb0dBSnVKMG9jek9FZ2NxTzlOTW41STZvdzhnaG1RZHBYZDQ1OTZKeS8zVnZJcUVuQ1I4Z3piV2JHNUQKT0I3MVdadTlobzMzbUcyT2Y1YnVjWlF4NUpWMTA5aHMzQURVUlIyd1VCNm9Qd1hBbTdaVVZVZDA0YWlKRmVyTQowQmI3UDZPeTg3dUkvdStlVWlRQU1HNzd5WkZOZVp1a2ZiRm9LV3A0ZDR2ZkY5TWZ3VHc9Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
+type: kubernetes.io/tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simple-webhook
+  name: simple-webhook
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-webhook
+  template:
+    metadata:
+      labels:
+        app: simple-webhook
+    spec:
+      tolerations:
+        - key: acme.com/lifespan-remaining
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - image: k3d-devregistry:5000/simple-webhook:latest
+          imagePullPolicy: Always
+          name: simple-webhook
+          env:
+            - name: TLS
+              value: "true"
+            - name: LOG_LEVEL
+              value: "trace"
+            - name: LOG_JSON
+              value: "false"
+          volumeMounts:
+            - name: tls
+              mountPath: "/etc/admission-webhook/tls"
+              readOnly: true
+      volumes:
+        - name: tls
+          secret:
+            secretName: simple-webhook-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: simple-webhook
+  name: simple-webhook
+  namespace: default
+spec:
+  type: NodePort
+  ports:
+    - name: "https"
+      port: 443
+      protocol: TCP
+      targetPort: 443
+      nodePort: 30100
+    - name: "http"
+      port: 80
+      protocol: TCP
+      targetPort: 80
+      nodePort: 30101
+  selector:
+    app: simple-webhook-svc

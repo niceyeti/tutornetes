@@ -24,6 +24,22 @@ sits in a well-understood location in the k8s object pipeline, and likewise they
 using simple http interfaces. This means little if any tooling is required to build up complicated
 cluster logic, service meshes, and so forth.
 
+TODO:
+* document each programmer use-case and task for mutation:
+    * mutating an object
+    * rejecting an object (in the mutator, not validation hook)
+
+# Deployment
+
+1) Build (ensure the image name matches in manifests):
+* docker build . -t 127.0.0.1:5000/simple-webhook
+* docker push 127.0.0.1:5000/simple-webhook
+
+2) Deploy to cluster:
+* kubectl apply -f dev/manifests/stack.yaml
+
+
+
 # References
 
 * Kubernetes Best Practices, 2020, Chapter 15
