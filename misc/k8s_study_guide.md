@@ -261,7 +261,22 @@ Generating certs:
 * openssl req -new -x509 -key tls.key -out tls.cert -days 365 -subj /CN=example.com  # CN is as mentioned in Ingress spec, and in general, is the name according to whomever the user is (an Istio component, k8s Ingress, etc)
 * kubectl create secret tls ingress-cert --cert=tls.cert --key=tls.key
 
-Generating generic
+# Linux commands
+
+Curl:
+* curl -s -I -k https://some-service.namespace.svc.cluster.local/health
+* curl -H "Host: goapp.dev" simple-go-app.default.svc.cluster.local/fortune
+
+DNS:
+* dig HOST_IP
+* Reverse lookup: dig -x HOST_IP
+
+
+Mangling:
+* kubectl get po -A | grep simple-web | tr -s ' ' | cut -d ' ' -f 2
+
+
+
 
 
 
