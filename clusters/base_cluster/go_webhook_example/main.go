@@ -20,8 +20,6 @@ const (
 )
 
 func main() {
-	fmt.Println("blah")
-
 	// handle our core application
 	http.HandleFunc("/mutate-pods", ServeMutatePods)
 	http.HandleFunc("/health", ServeHealth)
@@ -29,8 +27,8 @@ func main() {
 	// start the server
 	// listens to clear text http on port 8080 unless TLS env var is set to "true"
 	if os.Getenv("TLS") == "true" {
-		cert := "/etc/admission-webhook/tls/tls.crt"
-		key := "/etc/admission-webhook/tls/tls.key"
+		key := os.Getenv("TLS_KEY_PATH")
+		cert := os.Getenv("TLS_CERT_PATH")
 		fmt.Println("Listening on port 443...")
 		log.Fatal(http.ListenAndServeTLS(":443", cert, key, nil))
 	} else {
@@ -56,7 +54,7 @@ func ServeMutatePods(w http.ResponseWriter, r *http.Request) {
 		Request: in.Request,
 	}
 
-	out, err := mt.Mutate()
+	ar, err := mt.Mutate()
 	if err != nil {
 		e := fmt.Errorf("could not generate admission response: %v", err)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
@@ -64,7 +62,8 @@ func ServeMutatePods(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	jout, err := json.Marshal(out)
+	jout, err := json.Marshal(ar)
+	fmt.Println("out: " + string(jout))
 	if err != nil {
 		e := fmt.Errorf("could not parse admission response: %v", err)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
