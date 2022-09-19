@@ -42,10 +42,16 @@ TODO:
 Build and push the app:
 * docker buildx build -t 127.0.0.1:5000/simple-webhook -f DockerfileDebug .
 * docker push 127.0.0.1:5000/simple-webhook
-Label the ns:
-* kubectl label ns default admission-webhook=enabled
+Build the trust info:
+* generate certs: ./cert_gen.sh
+* copy the CA bundle in the script output to the caBundle of the mutating-webhook yaml
+* copy the generated webhook_tls_secret.yaml to stack.yaml
 Deploy the app:
-* kubectl create -f dev/manifests/stack.yaml
+1) kubectl create -f dev/manifests/stack.yaml
+2) kubectl create -f dev/manifests/mutating_webhook.yaml
+3) Verify the webhook is hit by creating any pod:
+  * kubectl run busybee -n webhook-example --image=busybox --command -- /bin/sh -c "sleep infinity"
+  * kubectl logs [the webhook pod]
 
 Diagnostics:
 * Confirm the webhook service is up:
@@ -53,7 +59,7 @@ Diagnostics:
     * kubectl exec dns-tools-78c965764d-84v8t -n webhook-example -- curl -v -k https://simple-webhook.webhook-example.svc.cluster.local/health
 * Delete everything, just delete the namespace:
     * kubectl delete ns webhook-example
-
+    * kubectl delete mutatingwebhookconfiguration simple-webhook.acme.com
 
 State:
 - After bringing up a new k3d cluster, the caBundle must be in the mutating webhook's yaml.

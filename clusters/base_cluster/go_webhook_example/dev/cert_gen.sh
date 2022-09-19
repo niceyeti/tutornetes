@@ -48,7 +48,6 @@ echo ">> MutatingWebhookConfiguration caBundle:"
 cat ca.crt | base64 | fold
 
 echo
-read -p "Copy the caBundle above into the mutating webhook controller yaml, then press ENTER."
-
+read -p "Copy the caBundle above into the mutating webhook controller yaml, then press ENTER and have a nice day."
 
 rm ca.crt ca.key ca.srl server.crt server.csr server.key
