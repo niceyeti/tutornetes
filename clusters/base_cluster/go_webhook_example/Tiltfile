@@ -1,0 +1,53 @@
+# Run builds serially
+#update_settings(max_parallel_updates=1)
+
+# Build and deploy the tools container so it always exists, instead of manually.
+docker_build(
+    ref='devregistry:5000/dnsutils',
+    context='../tools_container/',
+    dockerfile='../tools_container/Dockerfile',
+    only='./') # NOTE: 'only' is evaluated relative to the context parameter.
+
+# Build the webhook docker image
+docker_build(
+    ref='devregistry:5000/simple-webhook',
+    context='.',
+    dockerfile='./DockerfileDebug',
+    only='./') # NOTE: 'only' is evaluated relative to the context parameter.
+
+# The kubernetes resources must be created in a specific order, since the
+# deployment of the webhook itself will cause subsequent conflicts with
+# pod/deployment creation as it does its thing. The clean way to resolve this
+# is by having it operate on a separate namespace from its own deployment,
+# I'm just keeping it simple for a straightforward/deletable demo namespace.
+# The required order of creation:
+#   0) create the webhook-example namespace (so the entire example can be deleted)
+#   1) deploy the app stack
+#   2) deploy the tools container
+#   3) deploy the webhook
+k8s_yaml(['./dev/manifests/tls_secret.yaml',
+        './dev/manifests/deployment.yaml',
+        './dev/manifests/service.yaml'])
+
+#k8s_resource(workload='webhook-example:namespace', new_name='namespace')
+# Order note: install the tools container before the webhook to avoid conflicts.
+k8s_yaml(
+    helm(
+        '../tools_container/chart', 
+        name='',
+        namespace='webhook-example',
+        values=['../tools_container/chart/values.yaml']
+    )
+)
+
+# Yet again, object synchronization in starlark is unbelievably difficult, but 
+# I must be unaware of the api. Here, issuing a command to create the mutating
+# webhook manually when the webhook pod is detected--since tilt doesn't support
+# basic synchronization, e.g. a 'deps' param for the k8s_yaml func.
+local_resource(
+    'mutating-webhook', 
+    cmd='kubectl apply -f ./dev/manifests/mutating_webhook.yaml',  
+    deps=['./dev/manifests/mutating_webhook.yaml'],
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    auto_init=False)
+

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: simple-webhook
+  name: simple-webhook
+  namespace: webhook-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-webhook
+  template:
+    metadata:
+      labels:
+        app: simple-webhook
+    spec:
+#      tolerations:
+#        - key: acme.com/lifespan-remaining
+#          operator: Exists
+#          effect: NoSchedule
+      containers:
+        - image: devregistry:5000/simple-webhook:latest
+          imagePullPolicy: Always
+          name: simple-webhook
+          env:
+            - name: TLS
+              value: "true"
+            - name: TLS_KEY_PATH
+              value: "/etc/tls/tls.key"
+            - name: TLS_CERT_PATH
+              value: "/etc/tls/tls.crt"
+            - name: LOG_LEVEL
+              value: "trace"
+            - name: LOG_JSON
+              value: "false"
+          volumeMounts:
+            - name: tls
+              mountPath: "/etc/tls"
+              readOnly: true
+      volumes:
+        - name: tls
+          secret:
+            secretName: simple-webhook-tls

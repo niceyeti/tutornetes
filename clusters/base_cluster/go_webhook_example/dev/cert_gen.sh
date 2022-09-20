@@ -3,14 +3,17 @@
 cat <<-EOF
 -----------------------------------------------------------------------------------------------
 Generating tls cert and prv key; these is purely for development.
-The parameters to this script are the desired CN and subjectAltName
+The parameters within this script are the desired CN and subjectAltName
 in DNS (the k8s service FQDN, including namespace), per this mapping:
 
-    CN: the app name as required for tls
+    CN: the app name as required per tls
     Namespace of k8s service: this is required for the FQDN
     subjectAltName: DNS FQDN of the k8s service, e.g. 'simple-webhook.default.svc.cluster.local'
 
 The corresponding k8s tls secret is generated and output to /dev/manifests/.
+
+NOTE: this script only needs to be run once and the outputs managed as described
+before being committed.
 -----------------------------------------------------------------------------------------------
 EOF
 echo
@@ -48,6 +51,7 @@ echo ">> MutatingWebhookConfiguration caBundle:"
 cat ca.crt | base64 | fold
 
 echo
-read -p "Copy the caBundle above into the mutating webhook controller yaml, then press ENTER and have a nice day."
+read -p "Copy the caBundle above into the mutating webhook config yaml, then press ENTER and have a nice day."
+echo
 
 rm ca.crt ca.key ca.srl server.crt server.csr server.key
