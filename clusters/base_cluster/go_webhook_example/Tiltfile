@@ -1,5 +1,33 @@
+# NOTE: I encountered quite a few tilt api issues developing this file, likely due
+# to personal ignorance of best patterns. The primary issue is resolving what seems
+# like a simple build definition requirement, but turns out to be a Rube-Goldberg
+# under tilt: specify the order in which k8s objects are created and applied.
+# To do so I used the pattern, as below, of calling k8s_yaml then defining an
+# corresponding k8s_resource with resource_deps. Thus this uses a mixture of this
+# idiom, using k8s_resource and its resource_deps to attempt to define build
+# order. This 'works' but I'm hesitant to say it is unbreakable; the underlying
+# semantics of how objects are updated on change (patches vs re-creation) and
+# deconstruction, for instance, are required definition in a real engineering
+# environment. I hate to say it, but tilt isn't very explicit about these,
+# nor are the documents; they play the coy-Microsoft game of hiding requirements
+# under the hood, which actually need to be explicit. To give an example,
+# modifying the webhook-controller code causes an image rebuild; one would
+# expect a re-deployment, and ordered desctruction/re-creation of its downstream
+# dependencies; but the rebuild does not trigger a re-deploy, and instead seems
+# to do a patch (perhaps `kubectl set image` does similar), without rebuilding
+# dependencies. This is efficient. The gist is simply that the efficiency and
+# (non-explicit) semantics can yield unexpected behavior. I dislike it simply
+# because it betrays programmer expectations in order to be clever.
+
 # Run builds serially
-#update_settings(max_parallel_updates=1)
+update_settings(max_parallel_updates=1)
+
+# Create the namespace and specify a resource for it; the latter must be done since
+# creating a namespace does not create a 'workload'.
+k8s_yaml('./dev/manifests/namespace.yaml')
+k8s_resource(
+    new_name='webhook-namespace', 
+    objects=['webhook-example:Namespace:default'])
 
 # Build and deploy the tools container so it always exists, instead of manually.
 docker_build(
@@ -8,12 +36,28 @@ docker_build(
     dockerfile='../tools_container/Dockerfile',
     only='./') # NOTE: 'only' is evaluated relative to the context parameter.
 
+#k8s_resource(workload='webhook-example:namespace', new_name='namespace')
+# Order note: install the tools container before the webhook to avoid conflicts.
+k8s_yaml(
+    helm(
+        '../tools_container/chart',
+        name='',
+        namespace='webhook-example',
+        values=['../tools_container/chart/values.yaml']
+    )
+)
+k8s_resource(
+    'dns-tools',
+    resource_deps=['webhook-namespace'])
+
+
 # Build the webhook docker image
 docker_build(
     ref='devregistry:5000/simple-webhook',
     context='.',
-    dockerfile='./DockerfileDebug',
+    dockerfile='./Dockerfile',
     only='./') # NOTE: 'only' is evaluated relative to the context parameter.
+
 
 # The kubernetes resources must be created in a specific order, since the
 # deployment of the webhook itself will cause subsequent conflicts with
@@ -22,32 +66,30 @@ docker_build(
 # I'm just keeping it simple for a straightforward/deletable demo namespace.
 # The required order of creation:
 #   0) create the webhook-example namespace (so the entire example can be deleted)
-#   1) deploy the app stack
+#   1) deploy the app stack: secret, then deployment (tilt cannot distinguish the dependency on the secret)
 #   2) deploy the tools container
 #   3) deploy the webhook
-k8s_yaml(['./dev/manifests/tls_secret.yaml',
-        './dev/manifests/deployment.yaml',
-        './dev/manifests/service.yaml'])
+k8s_yaml('./dev/manifests/tls_secret.yaml')
+k8s_resource(
+    new_name='simple-webhook-tls',
+    objects=['simple-webhook-tls:Secret:webhook-example'],
+    resource_deps=['webhook-namespace'])
 
-#k8s_resource(workload='webhook-example:namespace', new_name='namespace')
-# Order note: install the tools container before the webhook to avoid conflicts.
-k8s_yaml(
-    helm(
-        '../tools_container/chart', 
-        name='',
-        namespace='webhook-example',
-        values=['../tools_container/chart/values.yaml']
-    )
+k8s_yaml([
+    './dev/manifests/deployment.yaml',
+    './dev/manifests/service.yaml'])
+k8s_resource(
+    'simple-webhook',
+    resource_deps=['simple-webhook-tls'])
+
+# Load the mutating-webhook, and create a k8s_resource for it since a resource
+# will not be created by default (since it doesn't run any pods). The resource
+# is required so we can define its build dependency on the webhook-app deployment.
+# The full dep ordering is: webhook-ns <- webhook deployment <- webhook config.
+# Adding the webhook config must be done after deployment.
+k8s_yaml('./dev/manifests/mutating_webhook.yaml')
+k8s_resource(
+    new_name="webhook-config",
+    objects=["simple-webhook.acme.com"],
+    resource_deps=['simple-webhook']
 )
-
-# Yet again, object synchronization in starlark is unbelievably difficult, but 
-# I must be unaware of the api. Here, issuing a command to create the mutating
-# webhook manually when the webhook pod is detected--since tilt doesn't support
-# basic synchronization, e.g. a 'deps' param for the k8s_yaml func.
-local_resource(
-    'mutating-webhook', 
-    cmd='kubectl apply -f ./dev/manifests/mutating_webhook.yaml',  
-    deps=['./dev/manifests/mutating_webhook.yaml'],
-    trigger_mode=TRIGGER_MODE_MANUAL,
-    auto_init=False)
-

@@ -146,6 +146,12 @@ Check docs for objects:
 
 Field selectors can be used to drill into yaml specs using the normal yaml keys:
 * kubectl get secret -n default -o yaml --field-selector=metadata.name=mysecret
+* kubectl get pods --field-selector=status.phase!=Running,spec.restartPolicy=Always
+
+However note that --field-selector applies to object metadata and status, whereas --selector ('-l')
+applies to labels.
+
+
 
 # Formatting
 
@@ -238,6 +244,25 @@ More complex debugging, interacting with etcd:
 * from: https://github.com/k3s-io/k3s/issues/2732
 * kubectl run --rm --tty --stdin --image docker.io/bitnami/etcd:latest etcdctl --overrides='{"apiVersion":"v1","kind":"Pod","spec":{"hostNetwork":true,"restartPolicy":"Never","securityContext":{"runAsUser":0,"runAsGroup":0},"containers":[{"command":["/bin/bash"],"image":"docker.io/bitnami/etcd:latest","name":"etcdctl","stdin":true,"stdinOnce":true,"tty":true,"volumeMounts":[{"mountPath":"/var/lib/rancher","name":"var-lib-rancher"}]}],"volumes":[{"name":"var-lib-rancher","hostPath":{"path":"/var/lib/rancher","type":"Directory"}}]}}'
 * ./bin/etcdctl --key /var/lib/rancher/k3s/server/tls/etcd/client.key --cert /var/lib/rancher/k3s/server/tls/etcd/client.crt --cacert /var/lib/rancher/k3s/server/tls/etcd/server-ca.crt endpoint status
+
+'Conditions' apply to existing objects, and can be used to wait for specific condition states or
+for the object itself to be deleted. However, object creation cannot be awaited; if needed, probably
+best to script kubectl commands or to use the http api.
+Synchronization can be done using `kubectl wait`.
+For example, await a pod's termination:
+* kubectl wait -n webhook-example pod -l app=simple-webhook --for=delete --timeout=1s
+Or for an already-existing pod to become ready:
+* kubectl -n nxs-r1-prod wait pod/rabbitmq-7575b7f589-dsdhl --for=condition=Ready --timeout=-1s
+
+The `wait` api is poorly documented, and I can't find where condition values are specified.
+Conditions themselves are more nuanced than the appear, since they are based on edge-semantics and
+controller logic. That's why its probably best to rely on concrete requests; these will be better
+understood by other developers anyway.
+For example to await the existence of an object, use the bash one-liner:
+* `until [[ $(kubectl get endpoints/rabbitmq -o=jsonpath='{.subsets[*].addresses[*].ip}') ]]; do sleep 5; done`
+    * awaits the existence of a service endpoint
+* `until [[ $(kubectl get po -A -l app=prometheus) ]]; do echo waiting; sleep 1; done;`
+    * await the existence of a pod with a specific label
 
 # Secrets
 

@@ -3,6 +3,7 @@ package mutator
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/wI2L/jsondiff"
 
@@ -77,7 +78,7 @@ func (pm *PodMutator) mutatePod(inpod *corev1.Pod) (*corev1.Pod, error) {
 	// injectSidecar(pod)
 
 	// Confirm the hook has been called by printing the logs for the hook container
-	fmt.Println("Hit webhook!")
+	fmt.Println("Hit webhook! " + time.Now().String())
 
 	return pod, nil
 }

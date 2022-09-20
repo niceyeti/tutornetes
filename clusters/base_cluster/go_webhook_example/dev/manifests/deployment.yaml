@@ -15,10 +15,6 @@ spec:
       labels:
         app: simple-webhook
     spec:
-#      tolerations:
-#        - key: acme.com/lifespan-remaining
-#          operator: Exists
-#          effect: NoSchedule
       containers:
         - image: devregistry:5000/simple-webhook:latest
           imagePullPolicy: Always

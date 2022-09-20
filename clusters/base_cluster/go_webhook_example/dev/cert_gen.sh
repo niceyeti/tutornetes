@@ -8,12 +8,12 @@ in DNS (the k8s service FQDN, including namespace), per this mapping:
 
     CN: the app name as required per tls
     Namespace of k8s service: this is required for the FQDN
-    subjectAltName: DNS FQDN of the k8s service, e.g. 'simple-webhook.default.svc.cluster.local'
+    subjectAltName: FQDN of the k8s service, e.g. 'simple-webhook.default.svc.cluster.local'
 
 The corresponding k8s tls secret is generated and output to /dev/manifests/.
 
 NOTE: this script only needs to be run once and the outputs managed as described
-before being committed.
+before committing them.
 -----------------------------------------------------------------------------------------------
 EOF
 echo
