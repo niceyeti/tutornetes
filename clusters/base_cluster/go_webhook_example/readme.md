@@ -2,7 +2,7 @@
 
 # Golang Kubernetes Webhook Minimal Working Example
 
-This folder contains a minimal working example of a mutating webhook
+This is a minimal working example of a mutating webhook.
 
 Webhooks are powerful and simple constructs Kubernetes for modifying k8s objects
 on specific events (get, create, patch, etc). See "Kubernetes Best Practices" for an
@@ -22,7 +22,11 @@ As native constructs, webhooks are much simpler than full CRD/Operator patterns 
 
 # Code
 
-The golang code is in . and in src/. See the mutatePod function; this is where a Pod definition could be modified and returned; currently it just logs a message to indicate the code path has been hit when a pod is deployed. Note that the entire webhook is merely a simple http endpoint, surrounded in kubernetes boilerplate.
+The golang code is in . and in src/. See the mutatePod function; this is where a Pod definition could be modified and returned; currently it just logs a message to indicate the webhook has been called when a pod is deployed. Note that the entire webhook is merely a simple http endpoint and a bunch of kubernetes boilerplate.
+
+# An Important Note
+
+To allow deleting the entire example namespace, in this project I add the mutation webhook deployment to the same namespace as that which it operates upon. This requires that the webhook is running before the mutation-webhook configuration is added. Otherwise, the config is added and the api-server will reach-out but fail to receive a response from the hook it specifies, such that no pods can be added to the namespace. If this occurs, just delete the mutating webhook config and start over.
 
 # Manual Deployment (vanilla build steps)
 
@@ -67,6 +71,23 @@ mistakes, etc., can leave the namespace in a state in which objects like pods ca
 be deployed, because they cannot pass the admission webhook. When developing a webhook,
 evaluate the full impact and develop in an environment with minimal collateral damage.
 Namespaces, labels, service names, state... they all tend to clash.
+
+# Security
+
+The webhook requires its own cert and tls secret. This ca-bundle is added to the mutating-webhook-configuration spec that gets loaded into the api-server. This means that the api-server authenticates that it is speaking to your webhook, but the webhook itself defines that trust. The api-server trusts whatever has been loaded into it, to perform **full mutation** on kubernetes objects (according to the scope define in the MutatingWebhookConfiguration definition). Hence, security is only as strong as the security of the account that added the webhook.
+
+The insider threat is probably the biggest of all: someone improperly accesses a service account capable of adding or modifying mutating webhook configuration. This could be inadvertent, such as a developer on a cluster who improperly scopes a mutating-webhook-configuration:
+1) an incorrect namespace could leave that namespace unusable
+2) a dysfunctional (e.g. in-development) webhook could render the namespace unusable or unstable
+
+It could also be malicious:
+1) api-server: hijacked ca-bundle causes server to trust unknown mutation webhook
+2) webhook: mutation webhook image modified or service diverted to attackers implementation
+3) api-server: attacker loads their own mutation webhook under a non-secured account
+
+And so on. This is important because some projects encourage non-local development on collective clusters; per both quality security, for webhook development this seems extremely hazardous. It will also slow devs down by making them overly cautious about cluster matters unrelated to development (as they also learn webhooks and related apis). Don't make devs walk on eggshells! Webhook development is best done on disposable local clusters (e.g. k3d), where developers are free to create/destroy/break/modify. The risks become better understood by doing so anyway.
+
+This evaluation is not complete, just food for thought.
 
 # References
 
