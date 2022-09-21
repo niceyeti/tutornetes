@@ -73,11 +73,7 @@ func (pm *PodMutator) mutatePod(inpod *corev1.Pod) (*corev1.Pod, error) {
 	pod := inpod.DeepCopy()
 
 	// Your code here: modify the pod (add a sidecar container, resource limits, security stuff, etc)
-	// Currently this just echoes the pod without modifications.
-
-	// injectSidecar(pod)
-
-	// Confirm the hook has been called by printing the logs for the hook container
+	// Currently this just logs a message and returns the pod without modifications.
 	fmt.Println("Hit webhook! " + time.Now().String())
 
 	return pod, nil
