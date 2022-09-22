@@ -66,11 +66,22 @@ First make sure the cluster is free of any previous artifacts using the cleanup 
 Then merely run `tilt up` or `up.sh`. To tear down, run `down.sh`. Review the Tiltfile in case of any issues; it was very fragile when written, as enforcing sequential build steps was more difficult than it should have been (IOW, things could be working now by mere chance!).
 
 # Lessons Learned
-Developing a webhook is potentially extremely disruptive. Deployed to the wrong namespace, yaml
+
+Developing a webhook is potentially very disruptive. Deployed to the wrong namespace, yaml
 mistakes, etc., can leave the namespace in a state in which objects like pods cannot
 be deployed, because they cannot pass the admission webhook. When developing a webhook,
 evaluate the full impact and develop in an environment with minimal collateral damage.
 Namespaces, labels, service names, state... they all tend to clash.
+
+These concerns merely call out to correct development mechanisms to control the blast radius:
+* adding/deleting and enabling/disable the webhook are first-class responsibilities: start
+  coding these first before coding a full solution, and spiral outward toward lower risk.
+* document in advance how to enable/disable the webhook.
+    * label the webhook stack (deployment, service, etc) such that it can be enabled/disabled
+    * delete the webhook-configuration, or merely ensure that it is easy to do so
+    * include test resources for accept/reject (in the case of admissions) or expected/actual yaml (for mutation hooks)
+* See other example projects' mechanisms. Elastic (ECK) uses the previous steps, which are
+close to vanilla kubernetes.
 
 # Security
 
@@ -88,6 +99,12 @@ It could also be malicious:
 And so on. This is important because some projects encourage non-local development on collective clusters; per both quality security, for webhook development this seems extremely hazardous. It will also slow devs down by making them overly cautious about cluster matters unrelated to development (as they also learn webhooks and related apis). Don't make devs walk on eggshells! Webhook development is best done on disposable local clusters (e.g. k3d), where developers are free to create/destroy/break/modify. The risks become better understood by doing so anyway.
 
 This evaluation is not complete, just food for thought.
+
+# Future Work
+
+Mutating webhooks can be used to build shrinkwrapping tools for linux capabilities, and various other system/security analyses: injecting monitoring sidecars into pod specifications that capture their used/required capabilities and generate the appropriate securityContext parameters, and so forth. Linux capabilities and securityContext specification is a messy affair. You may notice how often these features are mentioned (runAsUser, capabilities, etc) yet how fleetingly anyone describes *the method for deriving these profiles*, let alone reusable ones. One can see the value in similar security-oriented sidecars as a development aid, and a security posture analyzer. I'm still developing the use-cases.
+
+For most microservices, merely dropping all caps and adding only CAP_NET_RAW suffices in 99% of cases, or applications ought to be designed such that such minimal sets are satisfiable. But the sidecar approach is still interesting. Offerings like `kubebench` offer many similar analyses.
 
 # References
 

@@ -1,0 +1,18 @@
+Goals are not hard and fast, nor ranked.
+
+But, to quote all of my passive-aggressive NW upbringing, 'it would be nice if':
+* Complete full cloud-stack responsibilities. There are plenty of missing
+  real-world requirements. See the first chapters of most any cloud-dev book, 
+  such as Cloud Native Go:
+    * logging and something like logrus
+    * monitoring/metrics
+    * comprehensive security shrinkwrapping (a massive undertaking, but worthy of a winter project)
+    * practical DevOps workflows and management:
+        * tooling for updating apps
+        * db migrations
+* A minimalist full stack cloud deployment: same as previous, but minimalist, e.g. 'what would fit on a
+'raspberry pi cluster' or something similar.
+
+
+
+

@@ -288,18 +288,67 @@ Generating certs:
 
 # Linux commands
 
-Curl:
+No linux command is off the table when it comes to CNCF component diagnostics.
+So while this may be a bit exhaustive, I differ to beg...
+
+
+
+
+### Heredoc
+* Use `<<EOF` and `EOF` pair to define them
+* Use `<<-` for tabs and spaces 
+    ```
+    cat <<EOF
+    foo
+        bar
+    EOF
+    ```
+    ```
+    cat <<EOF > some_file.txt
+    foo
+    bar
+    EOF
+    ```
+
+### Curl
 * curl -s -I -k https://some-service.namespace.svc.cluster.local/health
 * curl -H "Host: goapp.dev" simple-go-app.default.svc.cluster.local/fortune
 
-DNS:
+### DNS
 * dig HOST_IP
 * Reverse lookup: dig -x HOST_IP
 
-
-Mangling:
+### Mangling
 * kubectl get po -A | grep simple-web | tr -s ' ' | cut -d ' ' -f 2
 
+### Capabilities
+
+* getcap $(which ping)
+* setcap 'cap_net_raw+p' $(which some_program) 
+
+The best approach to capabilities is to read and review their definition, rather than jumping
+right into the tools. This is because they encompass quite a few feature-oriented linux semantics;
+the docs are more useful than tool how-to online.
+
+Capabilities are defined by bit vectors and a logical masking/OR'ing scheme.
+They can be defined on executable files as well as on process descriptors and groups.
+
+* capsh: handy but not yet feature complete, as it does not show/decode all capabilities, though one (interestingly) can get the raw caps from /proc/[PID]/status
+    * capsh --decode=000001ffffffffff
+    * capsh --print
+* /proc/[PID]/status: this is a wealth of proc info, from Caps to seccomp profiles and other info.
+    * grep -C 10 Cap /proc/$(pgrep firefox)/status
+
+* Resources:
+    * https://blog.container-solutions.com/linux-capabilities-why-they-exist-and-how-they-work
+    * https://blog.container-solutions.com/linux-capabilities-in-practice
+
+#### systemctl
+Systemd management, usually for daemon management.
+Most of this is second nature, from experience:
+* systemctl restart docker.service
+* systemctl status docker.service
+* systemctl is-active docker.service
 
 
 
