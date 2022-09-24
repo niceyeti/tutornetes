@@ -1,0 +1,75 @@
+Per usual, I'm interested in applying some of the Golang Patterns course
+patterns to a multiplayer k8s gaming platform. The goals are:
+* design / patterns and language practice
+* over-engineer and use as many of the course patterns purely for practice
+
+Be cognizant that the course's patterns are not the limit of patterns on Golang.
+Others are:
+* architectural / infrastructural patterns in K8s, istio, etc
+* distributed patterns for distributed cloud apps (sharing realtime state and db)
+
+Observed patterns:
+1) Use Command for Call() / Undo() behavior in comment functionality.
+2) Use Builder and faceting... just because it is intriguing.
+* authorization
+* creating a user
+3) CQRS: transaction logging, undoability, etc. Maybe this applies
+   to creating/saving games in some form.
+
+
+Implementation goals: be thinking constantly about how game frameworks, shared realtime state,
+and so forth can be extended directly through K8s technology. For instance a simplified
+game network layer or set of microservices and their patterns. Traditional game frameworks
+defined their own responsibilities (raw services) which clearly could be factored out into 
+k8s components.
+
+
+
+User stories:
+
+# Platform
+The platform must be observable, easily fired up by a single developer and exposed through a web service on their machine.
+* k3d
+* basic app logging
+* isito, kiali and other observability components
+
+# User login
+Users can create a new account and then login securely.
+I would like this to be as light as possible; keycloak works, but such size is unappealling.
+However it would be nice to implement auth using declarative patterns using the service mesh.
+This suggests using off-the-shelf platforms, but I really want to have the lightest implementation
+possible, possibly even definining some of that myself. Research existing techhnologies, they may be
+worth learning anyway for professional development, despite being behemoths.
+
+Implementations: unknown. Need to research and choose an auth technology stack, but a minimal one.
+* Must mix with Istio.
+
+# User chat
+Users are allowed to log in and connect an audio device via their browser to 
+chat with other users in realtime. 
+* text chat
+* audio chat
+This functionality is secured such that chat logs disappear (such as after 10 mins),
+and are never committed to disk.
+
+Implementations: React front-end with simple components (material ui, etc) and 
+extremely minimal js libs.
+* Can frameworks be eliminated? Are there any mature WebAssembly frontend libs by now?
+
+# Realtime multiplayer gaming
+Users can play others in simple 2d games. This entails shared
+state, as well as usual game resources (sounds, sprites, etc).
+
+Implementations: ideally this will use browser technology, for generality and api stability.
+* Consider other technology: direct integration with  other gaming hardware (raspberry pi's etc).
+Raspberry Pi's aren't too far fetched, since such hardware provides a low-cost deployment strategy for
+new age social gaming stores. However wrangling free of specific hardware/devices would be nice too.
+* Input devices: browser based? Phone/device based?
+* Output devices: same.
+
+
+
+
+
+
+

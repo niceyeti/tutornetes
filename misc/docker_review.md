@@ -25,7 +25,6 @@ version 20.10.
 * docker history --no-trunc : show the build process of an image; useful for reverse engineering a Dockerfile from an image.
 * docker run -v [HOSTDIR]:[CONTAINER_DIR] some_image
 
-
 ## Docker Files
 
 Of note:
@@ -43,7 +42,6 @@ CMD: without brackets runs command as a child process of the shell:
 ```
 Providing brackets indicates the exe will be run directly. The benefit is that SIGINT and similar signals will be caught.
 
-
 ## Patterns
 
 1) Use multistage builds to reduce image size, or even scratch if possible
@@ -51,8 +49,6 @@ Providing brackets indicates the exe will be run directly. The benefit is that S
 * Build and distribute datasets as encrypted containers
 * Copy them into Pods using init-containers and sidecars, and Secrets for threat model.
 * Thereby, one could build a set of ML/analysis services with only read-only capabilities on the data, which remains encrypted at rest throughout.
-
-
 
 ## Other
 
