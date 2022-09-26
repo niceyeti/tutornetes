@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	// TODO: try this https://go.googlesource.com/tools/+/refs/heads/master/gopls/doc/workspace.md
 	"go_webhook_example/src/mutator"
@@ -20,13 +21,12 @@ const (
 )
 
 func main() {
-	// handle our core application
+	// minimal handlers
 	http.HandleFunc("/mutate-pods", ServeMutatePods)
 	http.HandleFunc("/health", ServeHealth)
 
 	// start the server
-	// listens to clear text http on port 8080 unless TLS env var is set to "true"
-	if os.Getenv("TLS") == "true" {
+	if strings.ToLower(os.Getenv("TLS")) == "true" {
 		key := os.Getenv("TLS_KEY_PATH")
 		cert := os.Getenv("TLS_CERT_PATH")
 		fmt.Println("Listening on port 443...")
@@ -39,7 +39,8 @@ func main() {
 
 // ServeHealth returns 200 to signal liveness.
 func ServeHealth(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "OK")
+	w.WriteHeader(http.StatusOK)
+	//fmt.Fprint(w, http.StatusOK)
 }
 
 // ServeMutatePods serves the pod mutation endpoint.
@@ -88,7 +89,6 @@ func parseRequest(r *http.Request) (*admissionv1.AdmissionReview, error) {
 	}
 
 	var a admissionv1.AdmissionReview
-
 	if err := json.Unmarshal(body, &a); err != nil {
 		return nil, fmt.Errorf("could not parse admission review request: %v", err)
 	}

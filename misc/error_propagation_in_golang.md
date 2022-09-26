@@ -12,12 +12,8 @@
 * Use fmt.Errof over errors.New
 * Use errors.Is instead of ==.
 
-Error propagation in go is an important concept, easily forgotten because of there are multiple ways of doing the same things, per different versions.
-In recreational coding it is the sort of thing that is easy to omit in order to prove some other code/system concept, with an "I'll learn it later" attitude. Then when it comes time to write robust production code, you scratch your head and scrape google for as much advice as possible in minimal time.
 
-That is, if you're me.
-
-Errors in a complex system should form a hierarchical tree of possible errors, by wrapping errors in deliberate ways. The difficult part is that errors and their types form implicitly form part of the public interface of a package, but often aren't fully built or poorly implemented. Many libs simply return raw errors, without wrapping or hierarchical semantics.
+Errors in a complex system should form a hierarchical tree of possible errors, by wrapping errors in deliberate ways. The difficult part is that errors and their types implicitly form part of the public interface of a package, but often aren't fully built or poorly implemented. Many libs simply return raw errors, without wrapping or hierarchical semantics.
 
 Robust error handling implementations have the following requirements:
 * XOR: best practice should let the caller assume that a function returning a non-nil error should ignore other returned values

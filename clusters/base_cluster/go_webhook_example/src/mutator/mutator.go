@@ -17,8 +17,6 @@ import (
 // This is a just a simplified version of the more complete webhook example from Slack:
 // https://github.com/slackhq/simple-kubernetes-webhook/blob/main/pkg/mutation/inject_env.go
 // This version is a cattywampus minimal implementation, no thought to encapsulation or responsibilities.
-// FWIW, other examples provide better examples of how admission-review code may be generalized to
-// fit ones use-case.
 type PodMutator struct {
 	Request *admissionv1.AdmissionRequest
 }

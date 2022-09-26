@@ -1,6 +1,6 @@
 # NOTE: I encountered quite a few tilt api issues developing this file, likely due
-# to personal ignorance of best patterns. The primary issue is resolving what seems
-# like a simple build definition requirement, but turns out to be a Rube-Goldberg
+# to personal ignorance of best patterns. The primary issue is resolving a
+# a simple build definition requirement that turns out to be a Rube-Goldberg
 # under tilt: specifying the order in which k8s objects are created and applied.
 # To do so I used the pattern, as below, of calling k8s_yaml then defining an
 # corresponding k8s_resource with resource_deps. This file uses a mixture of this
@@ -10,7 +10,7 @@
 # deconstruction, for instance, are required definition in a real engineering
 # environment. I hate to say it, but tilt isn't very explicit about these,
 # nor are the documents; they play the coy Microsoft game of hiding requirements
-# under the hood which actually need to be explicit. To give an example,
+# under the hood which actually need to be made explicit. To give an example,
 # modifying the webhook-controller code causes an image rebuild; one would
 # expect a re-deployment, and ordered deconstruction/re-creation of its downstream
 # dependencies; but the rebuild does not trigger a re-deploy, and instead seems
@@ -41,7 +41,7 @@ docker_build(
     dockerfile='../tools_container/Dockerfile',
     only='./') # NOTE: 'only' is evaluated relative to the context parameter.
 
-#k8s_resource(workload='webhook-example:namespace', new_name='namespace')
+
 # Order note: install the tools container before the webhook to avoid conflicts.
 k8s_yaml(
     helm(
