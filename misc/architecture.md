@@ -55,6 +55,56 @@ Factors 10-12 are infrastructural concerns, not code responsibilities, so go doe
 
 Some people call this the predecessor to microservices, so I wouldn't read too much into the architectural, Fowler&Co jargon. The concept lends itself to a "ports and adapters", but is more or less just intuitive microservices design once you have a few years of experience with them.
 
+## STRIDE, Threat Modeling, and Attack Trees
 
+STRIDE and threat-modeling are a terrific design activity, even if you ignore its security responsibilities.
+It deserves its own coverage, but in brief:
+* STRIDE: spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege
 
+Attack trees: similar to a fish-bone causal diagram in terms of displaying causal inputs toward a goal. First,
+draw a goal ("compromise key") around core protected elements in an architecture. Then draw the next layer of
+adjacent events/acitivites which could lead to that goal being satisfied ("insider threat", "bad crypto", etc).
+Each of these then has a set of its own inputs, and so on, until you reach initial external entities (the leaves of the tree). There are many example trees that describe the layout. Some implement formal definitions, such
+as AND/OR gates over their inputs, and so on. 
+* draw a goal state for an innermost item or trust-boundary
+* draw inputs to that goal state, considering AND/ORs, but keeping the models simple and communicable
+* refer to causal or security models like fish-bone or STRIDE to capture the full scope of threats (accidental, intentional, organizational, legal, etc).
+What is likable about fish-bone is that it formally specifies that you define the following threats:
+* the 6M's: method, material, manpower, measurement, machines, mother nature, management
 
+Threat modeling:
+1) define external entities first
+2) identify threats; use STRIDE to define each threat across the entire system.
+3) once found:
+    * eliminate threats by eliminating features
+    * mitigate threats (add passwords, complexity, etc)
+    * apply indirection using things like password salts to multiply attacker's burden
+
+Threat modeling diagrams are not just good for security, they're also great at-a-glance design docs.
+
+![symbols](./threat_model_symbols.png)
+Credit: Adam Shostack
+
+| ELEMENT | APPEARANCE | MEANING | EXAMPLES |
+|---|---|---|---|
+| Process | rounded rectangle (classically circles) | any running code | pods, containers, programs |
+| Data store | labeled pair of horizontal lines | tihngs that store data | sql db, process state (keys, sessions, etc) |
+| Data flow | pointed arrow | communication between processes or stores | connections, read/write ops |
+| External entities | rectangle with sharp corners | people or code outside one's control | third-party services, users, attackers |
+| Trust boundaries | dotted boundaries | Transition between principals or from one trust-level to another (defined w.r.t principals) | userspace app principal, kernel, network boundary diode |
+
+### Example Threat Model
+![example threat model](./example_threat_model.png)
+Credit: Adam Shostack
+
+Resources: see Shostack's "Threat Modeling" book for greater detail.
+
+## Secure by Design
+
+securityContexts: in kubernetes, often dropping all capabilities and then adding only net_cap_raw
+is sufficient to run an http-based microservice. 
+* drop all caps and add only net_cap_raw
+* set up a readonly root file system
+* run as non-root, however possible
+* ensure resources are upper bounded by setting a resourceQuota
+* use well-defined RBAC to scope service accounts and actions
