@@ -29,3 +29,12 @@ they should be trivialized as such. Focus instead on other aspects of technical 
 - db migrations, etc
 - document as if this were a production app: identify stakeholders and responsibilities,
   ie, maintenance and testing.
+
+### Development and Testing
+
+Postgres installation for testing (change params appropriately):
+* `docker pull postgres:latest`
+* `docker run -itd -e POSTGRES_USER=niceyeti -e POSTGRES_PASSWORD=niceyeti -p 5432:5432 -v /data:/var/lib/postgresql/data --name postgresql postgres`
+* Source: https://www.baeldung.com/ops/postgresql-docker-setup
+
+
