@@ -6,14 +6,7 @@ CLIENT_DIR = client
 SHELL := bash
 SHELL_VERSION = $(shell echo $$BASH_VERSION)
 UNAME := $(shell uname -s)
-VERSION_AND_ARCH = $(shell uname -rm)
-ifeq ($(UNAME),Darwin)
-	OS = macos ${VERSION_AND_ARCH}
-else ifeq ($(UNAME),Linux)
-	OS = linux ${VERSION_AND_ARCH}
-else
-$(error OS not supported by this Makefile)
-endif
+OS = linux $(shell uname -rm)
 PACKAGE = $(shell head -1 go.mod | awk '{print $$2}')
 CHECK_DIR_CMD = test -d $@ || (echo "\033[31mDirectory $@ doesn't exist\033[0m" && false)
 HELP_CMD = grep -E '^[a-zA-Z_-]+:.*?\#\# .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?\#\# "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -31,10 +24,10 @@ all: $(project) ## Generate Pbs and build
 crud: $@ ## Generate Pbs and build for crud service
 
 $(project):
-	@${CHECK_DIR_CMD}
-	protoc -I$@/${PROTO_DIR} --go_opt=module=${PACKAGE} --go_out=. --go-grpc_opt=module=${PACKAGE} --go-grpc_out=. $@/${PROTO_DIR}/*.proto
-	go build -o ${BIN_DIR}/$@/${SERVER_BIN} ./$@/${SERVER_DIR}
-	go build -o ${BIN_DIR}/$@/${CLIENT_BIN} ./$@/${CLIENT_DIR}
+	## @${CHECK_DIR_CMD}
+	protoc -I${PROTO_DIR} --go_opt=module=${PACKAGE} --go_out=. --go-grpc_opt=module=${PACKAGE} --go-grpc_out=. ${PROTO_DIR}/*.proto
+	go build -o ${BIN_DIR}/${SERVER_BIN} ./${SERVER_DIR}
+	go build -o ${BIN_DIR}/${CLIENT_BIN} ./${CLIENT_DIR}
 
 test: all ## Launch tests
 	go test ./...
