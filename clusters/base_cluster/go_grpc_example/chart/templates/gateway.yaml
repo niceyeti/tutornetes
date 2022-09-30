@@ -1,0 +1,28 @@
+# Gateways map names over trust boundaries, here exposing the go app.
+# This is a critical point: Gateways represent network trust boundaries.
+# via its public name to VirtualService hosts. Gateways operate only on L4.
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: {{ .Values.ingressGateway.name }}
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  selector:
+  # WARNING: in the doc/examples the ingress is named 'ingressgateway'.
+  # The correct name is found from the istio-ingress service: `kubectl get svc --all-namespaces`
+    istio: ingress # use istio default controller
+  servers:
+  - port:
+      number: {{ .Values.ingressGateway.port }}
+      name: {{ .Values.ingressGateway.portname }}
+      protocol: {{ .Values.ingressGateway.protocol }}
+    hosts:
+    # TODO: this allows any virtual service to bind to the gateway; need to define this concretely.
+    #- "*" # TODO: define this 'hosts' a param here and in virtual service
+    #- {{ .Values.virtualService.host | quote }}
+    - {{ .Values.virtualService.host | quote }}
+    # TODO: add security configuration to the server; see p138 in Istio Up and Running
+    #tls:
+    #  mode: SIMPLE
+    #  serverCertificate: /etc/certs/foo-com-public.pem
+    #  privateKey: /etc/certs/foo-com-privateky.pem

@@ -3,4 +3,3 @@ misc/istio-1.13.2/*
 misc/istio-1.13.3/*
 !misc/istio-1.13.3/manifest.yaml
 **/.kubescape/
-clusters/base_cluster/go_grpc_example/

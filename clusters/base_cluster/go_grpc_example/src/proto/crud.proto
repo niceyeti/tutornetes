@@ -1,0 +1,38 @@
+syntax = "proto3"
+
+package crud;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/Clement-Jean/grpc-go-course/blog/proto";
+
+message Post {
+  string id = 1;
+  string author_id = 2;
+  string title = 3;
+  string description = 4;
+  string full_text = 5;
+}
+
+message PostID {
+    string id = 1;
+}
+
+service CrudService {
+    // Create a Post
+    rpc CreatePost(Post) returns (PostID);
+
+    // Read a Post
+    rpc ReadPost(PostID) returns (google.protobuf.Empty);
+
+    // Update a Post
+    rpc UpdatePost(Post) returns (google.protobuf.Empty);
+
+    // Delete a Post
+    rpc DeletePost(PostID) returns (google.protobuf.Empty);
+
+    // List Posts
+    rpc ListPosts(google.protobuf.Empty) returns (stream Post);
+}
+
+
