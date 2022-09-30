@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -53,8 +54,11 @@ func getEnv(envVar, defaultVal string) string {
 	return viper.GetString(envVar)
 }
 
-func getTrimmedConfig(path string) (string, error) {
+func getTrimmedConfig(path, defaultCfg string) (string, error) {
 	bytes, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return defaultCfg, nil
+	}
 	if err != nil {
 		return "", fmt.Errorf("unable to read config file %s: %w", path, err)
 	}
@@ -66,12 +70,12 @@ func readDBConfig() (*DBCreds, error) {
 	dbHost := getEnv(DB_HOST, DB_HOST_DEFAULT)
 	dbPort := getEnv(DB_PORT, DB_PORT_DEFAULT)
 
-	dbUser, err := getTrimmedConfig(DB_USER_PATH)
+	dbUser, err := getTrimmedConfig(DB_USER_PATH, "")
 	if err != nil {
 		return nil, err
 	}
 
-	dbPass, err := getTrimmedConfig(DB_PASS_PATH)
+	dbPass, err := getTrimmedConfig(DB_PASS_PATH, "")
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +124,7 @@ func main() {
 
 	cfg, err := readAppConfig()
 	if err != nil {
-		log.Fatalf("error reading config: %w", err)
+		log.Fatalf("error reading config: %v", err)
 	}
 
 	lis, err := net.Listen("tcp", cfg.Addr)

@@ -1,22 +1,15 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"math"
-
-	//pb "github.com/Clement-Jean/grpc-go-course/calculator/proto"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	pb "go_grpc_example/proto"
-
 )
 
 type Server struct {
-	pb.CrudServiceServer
+	//pb.CrudServiceServer
+	pb.UnimplementedCrudServiceServer
 }
 
+/*
 func (*Server) (ctx context.Context, req *pb.SqrtRequest) (*pb.SqrtResponse, error) {
 	log.Printf("Sqrt was invoked with number %d\n", req.Number)
 
@@ -33,4 +26,4 @@ func (*Server) (ctx context.Context, req *pb.SqrtRequest) (*pb.SqrtResponse, err
 		Result: math.Sqrt(float64(number)),
 	}, nil
 }
-
+*/
