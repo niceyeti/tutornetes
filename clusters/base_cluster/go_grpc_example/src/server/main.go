@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 package main
 
 import (
@@ -133,7 +130,8 @@ func main() {
 
 	log.Printf("Listening at %s\n", cfg.Addr)
 
-	s := grpc.NewServer()
+	opts := []grpc.ServerOption{}
+	s := grpc.NewServer(opts...)
 	pb.RegisterCrudServiceServer(s, &Server{})
 
 	if err := s.Serve(lis); err != nil {
