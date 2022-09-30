@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 
 	//pb "github.com/niceyeti/tutornetes/clusters/base_cluster/go_grpc_example/src/proto"
-	pb "go_grpc_example/src/proto"
+	pb "go_grpc_example/proto"
 	//pb "github.com/Clement-Jean/grpc-go-course/blog/proto"
 	"google.golang.org/grpc"
 )
