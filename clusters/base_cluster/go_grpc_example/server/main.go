@@ -98,14 +98,14 @@ func readAppConfig() (*AppConfig, error) {
 	addr := fmt.Sprintf("%s:%s", host, port)
 
 	// TODO: add encryption later. The mesh takes care of this, but it would be a useful exercise.
-	//cert := getEnv(HTTPS_CERT_PATH)
-	//key := getEnv(HTTPS_KEY_PATH)
+	cert := getEnv(HTTPS_CERT_PATH, "")
+	key := getEnv(HTTPS_KEY_PATH, "")
 
 	return &AppConfig{
 		DbCreds: *dbCreds,
 		Addr:    addr,
-		Cert:    "",
-		Key:     "",
+		Cert:    cert,
+		Key:     key,
 	}, nil
 }
 
@@ -114,12 +114,10 @@ func main() {
 	//if err != nil {
 	//	log.Fatal(err)
 	//}
-
 	//err = client.Connect(context.Background())
 	//if err != nil {
 	//	log.Fatal(err)
 	//}
-
 	//collection = client.Database("blogdb").Collection("blog")
 
 	cfg, err := readAppConfig()
