@@ -15,7 +15,8 @@ import (
 	// for interesting use-cases like hot reloads; none of that is needed in this app.
 	"github.com/spf13/viper"
 
-	pb "github.com/niceyeti/tutornetes/clusters/base_cluster/go_grpc_example/src/proto"
+	//pb "github.com/niceyeti/tutornetes/clusters/base_cluster/go_grpc_example/src/proto"
+	pb "go_grpc_example/src/proto"
 	//pb "github.com/Clement-Jean/grpc-go-course/blog/proto"
 	"google.golang.org/grpc"
 )

@@ -1,6 +1,6 @@
 package main
 
-import pb "github.com/Clement-Jean/grpc-go-course/blog/proto"
+import pb "go_grpc_example/proto"
 
 type Server struct {
 	pb.PostServiceServer
