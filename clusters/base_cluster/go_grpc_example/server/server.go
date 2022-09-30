@@ -14,7 +14,7 @@ type Server struct {
 func (s *Server) CreatePost(ctx context.Context, post *pb.Post) (*pb.PostID, error) {
 	log.Printf("CreatePost invoked\n")
 
-	return nil, nil
+	return &pb.PostID{Id: "123"}, nil
 }
 
 //func (s *Server) ReadPost(context.Context, *PostID) (*empty.Empty, error)
