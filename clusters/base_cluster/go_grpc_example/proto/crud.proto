@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package crud;
 
+// TODO: this gives a deprecation warning when running `go get -u ./...`. Ignoring for now.
 import "google/protobuf/empty.proto";
-// import "google.golang.org/protobuf/empty.proto";
 
 option go_package = "go_grpc_example/proto";
 
