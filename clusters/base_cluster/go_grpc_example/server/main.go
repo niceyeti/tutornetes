@@ -13,7 +13,6 @@ import (
 	// for interesting use-cases like hot reloads; none of that is needed in this app.
 	"github.com/spf13/viper"
 
-	//pb "github.com/niceyeti/tutornetes/clusters/base_cluster/go_grpc_example/src/proto"
 	pb "go_grpc_example/proto"
 	//pb "github.com/Clement-Jean/grpc-go-course/blog/proto"
 	"google.golang.org/grpc"
@@ -29,6 +28,8 @@ const (
 
 	DB_HOST         = "DB_HOST"
 	DB_PORT         = "DB_PORT"
+	DB_USER         = "DB_USER"
+	DB_PASSWORD     = "DB_PASSWORD"
 	DB_HOST_DEFAULT = "127.0.0.1"
 	DB_PORT_DEFAULT = "5432"
 	DB_USER_PATH    = "/etc/secrets/db/user"
@@ -70,14 +71,25 @@ func readDBConfig() (*DBCreds, error) {
 	dbHost := getEnv(DB_HOST, DB_HOST_DEFAULT)
 	dbPort := getEnv(DB_PORT, DB_PORT_DEFAULT)
 
-	dbUser, err := getTrimmedConfig(DB_USER_PATH, "")
-	if err != nil {
-		return nil, err
+	var err error
+	dbUser := getEnv(DB_USER, "")
+	if dbUser == "" {
+		dbUser, err = getTrimmedConfig(DB_USER_PATH, "")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		log.Println("Warning: db cred taken from insecure env. In prod, creds should be transferred via tempfs instead.")
 	}
 
-	dbPass, err := getTrimmedConfig(DB_PASS_PATH, "")
-	if err != nil {
-		return nil, err
+	dbPass := getEnv(DB_PASSWORD, "")
+	if dbPass == "" {
+		dbPass, err = getTrimmedConfig(DB_PASS_PATH, "")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		log.Println("Warning: db cred taken from insecure env. In prod, creds should be transferred via tempfs instead.")
 	}
 
 	return &DBCreds{
@@ -110,16 +122,6 @@ func readAppConfig() (*AppConfig, error) {
 }
 
 func main() {
-	//client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://root:root@localhost:27017/"))
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//err = client.Connect(context.Background())
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//collection = client.Database("blogdb").Collection("blog")
-
 	cfg, err := readAppConfig()
 	if err != nil {
 		log.Fatalf("error reading config: %v", err)
@@ -130,11 +132,28 @@ func main() {
 		log.Fatalf("Failed to listen: %v\n", err)
 	}
 
+	db, err := Connect(&cfg.DbCreds)
+	if err != nil {
+		log.Fatalf("db connection failed: %v\n", err)
+	}
+
+	if err = EnsureDB(db, "posts"); err != nil {
+		log.Fatalf("db creation failed: %v\n", err)
+	} else {
+		log.Println("db exists")
+	}
+
+	// Migrate the schema
+	err = db.AutoMigrate(&pb.Post{})
+	if err != nil {
+		log.Fatalf("db connection failed: %v\n", err)
+	}
+
 	log.Printf("Listening at %s\n", cfg.Addr)
 
 	opts := []grpc.ServerOption{}
 	s := grpc.NewServer(opts...)
-	pb.RegisterCrudServiceServer(s, &Server{})
+	pb.RegisterCrudServiceServer(s, &Server{db: db})
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v\n", err)

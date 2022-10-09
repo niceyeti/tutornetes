@@ -16,22 +16,11 @@ SERVER_BIN = ${SERVER_DIR}
 CLIENT_BIN = ${CLIENT_DIR}
 
 .DEFAULT_GOAL := help
-##.PHONY: crud help
+.PHONY := all help clean crud clean_crud test bump about
 
 all: rebuild ## Generate Pbs and build
 
-rebuild: clean crud ## Rebuild the whole project
-
-## crud: $@ ## Generate Pbs and build for crud service
-crud: go.mod go.sum $(ls ${SERVER_DIR})
-	## @${CHECK_DIR_CMD}
-	protoc -I${PROTO_DIR} --go_opt=module=${PACKAGE} --go_out=. --go-grpc_opt=module=${PACKAGE} --go-grpc_out=. ${PROTO_DIR}/*.proto
-	go build -o ./${BIN_DIR}/${SERVER_BIN} ./${SERVER_DIR}
-	go build -o ./${BIN_DIR}/${CLIENT_BIN} ./${CLIENT_DIR}
-
-test: all ## Launch tests
-	echo test
-	go test ./...
+rebuild: clean bump crud ## Rebuild the whole project
 
 clean: clean_crud ## Clean generated files
 	${RM_F_CMD} ssl/*.crt
@@ -43,9 +32,20 @@ clean: clean_crud ## Clean generated files
 clean_crud: ## Clean generated files for CRUD app
 	${RM_F_CMD} ./${PROTO_DIR}/*.pb.go
 
-bump: go.mod go.sum ## Update packages version
+cproto: ## Compile proto definitions. This must be done or the generated go package will not be found by tools like `go get -u ./...`
+	protoc -I${PROTO_DIR} --go_opt=module=${PACKAGE} --go_out=. --go-grpc_opt=module=${PACKAGE} --go-grpc_out=. ${PROTO_DIR}/*.proto
+
+## crud: $@ ## Generate Pbs and build for crud service
+crud: cproto go.mod go.sum $(ls ${SERVER_DIR})
+	go build -o ./${BIN_DIR}/${SERVER_BIN} ./${SERVER_DIR}
+	go build -o ./${BIN_DIR}/${CLIENT_BIN} ./${CLIENT_DIR}
+
+test: ## Launch tests
+	go test ./...
+
+bump: cproto go.mod go.sum ## Update packages version
 	go get -u ./...
-	@echo "  ^---Ignore the deprecation warning. FUTURE: address dep warning." && echo
+	@echo "  ^---Ignoring github.com/golang/protobuf deprecation warning. TODO: address the dep warning." && echo
 
 about: ## Display info related to the build
 	@echo "OS: ${OS}"

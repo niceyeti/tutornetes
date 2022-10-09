@@ -5,6 +5,10 @@ of ruins*
 
 \- Ellen Ullman, The Dumbing-down of Programming
 
+## Single-Reponsibility Principle
+A class/package should have a single reason to change.
+It should be open to extension, closed to modification.
+
 ## Lesson 1: Open Closed Principle
 Specification pattern:
 Although I would just pass in a function for filtering, the instructor's example is that of filtering
@@ -37,7 +41,11 @@ So(width, ShouldEqual, square.GetWidth())
 ```
 
 ## Lesson 3: Interface Segregation Principle
-Basically, try to break up interfaces into the minimal set of interfaces that are least likely to change.
+Basically, break up interfaces into the minimal set of interfaces that are least likely to change.
+Don't start by defining interfaces, grow them: implement struct receivers first until interfaces become apparent.
+Likewise, define the interfaces your package consumes in that package (consumer interface definition),
+rather than in the implementing package ("Consume interfaces, export implementation").
+
 The instructor's example is that of an OldPrinter interface containing Scan, Print, and Fax methods.
 These should instead be broken up into Scanner, Printer, and Faxer interfaces, and gathered into one
 for instance, by embedding.
@@ -45,8 +53,10 @@ for instance, by embedding.
 Basically just prefer high granularity, but without proliferating too many interfaces or over-abstracting.
 
 In Golang, there are a few rules of thumb:
-1) Return structs, consume interfaces
+1) Return structs, consume interfaces. Returning interfaces is often a code smell, because it places a dependency
+from (A) the definition on the package declaring the interface (b), and what if something else (C) wants to import it? It implicitly imports the B.
 2) Be conservative about writing interfaces; if there is only a single implementer of an interface, and only one user (e.g. your own app) then there is little reason for an interface.
+
 
 ## Lesson 4: Dependency Inversion Principle
 High level modules should not depend on low-level modules.

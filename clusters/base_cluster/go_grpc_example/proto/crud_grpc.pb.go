@@ -26,7 +26,7 @@ type CrudServiceClient interface {
 	// Create a Post
 	CreatePost(ctx context.Context, in *Post, opts ...grpc.CallOption) (*PostID, error)
 	// Read a Post
-	ReadPost(ctx context.Context, in *PostID, opts ...grpc.CallOption) (*empty.Empty, error)
+	ReadPost(ctx context.Context, in *PostID, opts ...grpc.CallOption) (*Post, error)
 	// Update a Post
 	UpdatePost(ctx context.Context, in *Post, opts ...grpc.CallOption) (*empty.Empty, error)
 	// Delete a Post
@@ -52,8 +52,8 @@ func (c *crudServiceClient) CreatePost(ctx context.Context, in *Post, opts ...gr
 	return out, nil
 }
 
-func (c *crudServiceClient) ReadPost(ctx context.Context, in *PostID, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *crudServiceClient) ReadPost(ctx context.Context, in *PostID, opts ...grpc.CallOption) (*Post, error) {
+	out := new(Post)
 	err := c.cc.Invoke(ctx, "/crud.CrudService/ReadPost", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ type CrudServiceServer interface {
 	// Create a Post
 	CreatePost(context.Context, *Post) (*PostID, error)
 	// Read a Post
-	ReadPost(context.Context, *PostID) (*empty.Empty, error)
+	ReadPost(context.Context, *PostID) (*Post, error)
 	// Update a Post
 	UpdatePost(context.Context, *Post) (*empty.Empty, error)
 	// Delete a Post
@@ -135,7 +135,7 @@ type UnimplementedCrudServiceServer struct {
 func (UnimplementedCrudServiceServer) CreatePost(context.Context, *Post) (*PostID, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreatePost not implemented")
 }
-func (UnimplementedCrudServiceServer) ReadPost(context.Context, *PostID) (*empty.Empty, error) {
+func (UnimplementedCrudServiceServer) ReadPost(context.Context, *PostID) (*Post, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadPost not implemented")
 }
 func (UnimplementedCrudServiceServer) UpdatePost(context.Context, *Post) (*empty.Empty, error) {

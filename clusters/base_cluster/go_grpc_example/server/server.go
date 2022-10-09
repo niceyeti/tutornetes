@@ -4,10 +4,12 @@ import (
 	"context"
 	pb "go_grpc_example/proto"
 	"log"
+
+	"gorm.io/gorm"
 )
 
 type Server struct {
-	//pb.CrudServiceServer
+	db *gorm.DB
 	pb.UnimplementedCrudServiceServer
 }
 
@@ -17,7 +19,7 @@ func (s *Server) CreatePost(ctx context.Context, post *pb.Post) (*pb.PostID, err
 	return &pb.PostID{Id: "123"}, nil
 }
 
-//func (s *Server) ReadPost(context.Context, *PostID) (*empty.Empty, error)
+//func (s *Server) ReadPost(context.Context, *PostID) (*Post, error)
 //func (s *Server) UpdatePost(context.Context, *Post) (*empty.Empty, error)
 //func (s *Server) DeletePost(context.Context, *PostID) (*empty.Empty, error)
 //func (s *Server) ListPosts(*empty.Empty, CrudService_ListPostsServer) error

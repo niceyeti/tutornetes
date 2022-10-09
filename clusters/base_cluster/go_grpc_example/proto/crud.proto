@@ -24,7 +24,7 @@ service CrudService {
     rpc CreatePost(Post) returns (PostID);
 
     // Read a Post
-    rpc ReadPost(PostID) returns (google.protobuf.Empty);
+    rpc ReadPost(PostID) returns (Post);
 
     // Update a Post
     rpc UpdatePost(Post) returns (google.protobuf.Empty);
