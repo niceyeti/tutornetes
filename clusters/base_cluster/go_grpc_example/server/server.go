@@ -18,8 +18,8 @@ func (s *Server) CreatePost(ctx context.Context, post *pb.Post) (*pb.PostID, err
 	log.Printf("CreatePost invoked\n")
 
 	dto := NewPost(post)
+	//dto.ID = 345
 	// TODO: review gorm docs and convention, I'm flying by the seat of my pants. ID should (?) autoincrement.
-	dto.ID = 13
 	tx := s.db.
 		WithContext(ctx).
 		Create(&dto)

@@ -59,6 +59,17 @@ Developing with the db, on host and no k3d cluster:
 3) Run the server (lazy way with env vars):
     * export DB_USER=niceyeti; export DB_PASSWORD=niceyeti; export DB_HOST=172.17.0.1; export DB_PORT=5432; ./bin/server
 
+### The Database
+
+The database is merely for demonstration purposes and playing with gorm,
+and describes CRUD operations for a bunch of 'Post' objects which are like blog posts.
+
+NOTE: the code here is not batteries-included.
+It is not free from sql-injection, has no fluent validation checks, nor did I fully review the gorm docs.
+There could be much to gain in terms of cleaner implementation, layering, security, connection management, and so on.
+
+
+
 ### Diagnostics and Tools
 
 Port pings:

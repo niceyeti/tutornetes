@@ -18,7 +18,7 @@ func createPost(c pb.CrudServiceClient) {
 	log.Println("createPost was invoked")
 
 	res, err := c.CreatePost(context.Background(), &pb.Post{
-		Id:          "321",
+		Id:          "321123",
 		AuthorId:    "Jose",
 		Title:       "Gone With the Wind",
 		Description: "Humpty dumpy",

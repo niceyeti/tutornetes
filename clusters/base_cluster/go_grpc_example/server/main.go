@@ -25,22 +25,7 @@ const (
 	SERV_PORT_DEFAULT = "80"
 	HTTPS_CERT_PATH   = "/etc/secrets/host.cert"
 	HTTPS_KEY_PATH    = "/etc/secrets/host.key"
-
-	DB_HOST         = "DB_HOST"
-	DB_PORT         = "DB_PORT"
-	DB_USER         = "DB_USER"
-	DB_PASSWORD     = "DB_PASSWORD"
-	DB_HOST_DEFAULT = "127.0.0.1"
-	DB_PORT_DEFAULT = "5432"
-	DB_USER_PATH    = "/etc/secrets/db/user"
-	DB_PASS_PATH    = "/etc/secrets/db/passwd"
 )
-
-type DBCreds struct {
-	Addr string
-	User string
-	Pass string
-}
 
 type AppConfig struct {
 	DbCreds DBCreds
@@ -67,40 +52,8 @@ func getTrimmedConfig(path, defaultCfg string) (string, error) {
 	return strings.TrimSpace(string(bytes)), nil
 }
 
-func readDBConfig() (*DBCreds, error) {
-	dbHost := getEnv(DB_HOST, DB_HOST_DEFAULT)
-	dbPort := getEnv(DB_PORT, DB_PORT_DEFAULT)
-
-	var err error
-	dbUser := getEnv(DB_USER, "")
-	if dbUser == "" {
-		dbUser, err = getTrimmedConfig(DB_USER_PATH, "")
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		log.Println("Warning: db cred taken from insecure env. In prod, creds should be transferred via tempfs instead.")
-	}
-
-	dbPass := getEnv(DB_PASSWORD, "")
-	if dbPass == "" {
-		dbPass, err = getTrimmedConfig(DB_PASS_PATH, "")
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		log.Println("Warning: db cred taken from insecure env. In prod, creds should be transferred via tempfs instead.")
-	}
-
-	return &DBCreds{
-		Addr: fmt.Sprintf("%s:%s", dbHost, dbPort),
-		User: dbUser,
-		Pass: dbPass,
-	}, nil
-}
-
 func readAppConfig() (*AppConfig, error) {
-	dbCreds, err := readDBConfig()
+	dbCreds, err := ReadDBConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -137,19 +90,13 @@ func main() {
 		log.Fatalf("db connection failed: %v\n", err)
 	}
 
-	// TODO: this is solely for development to eliminate cumulative state
-	DeleteDb(db, "posts")
+	// TODO: deletion is solely for development to eliminate cumulative state
+	DeleteDb(db, cfg.DbCreds.DbName)
 
-	if err = EnsureDB(db, "posts"); err != nil {
-		log.Fatalf("db creation failed: %v\n", err)
+	if err = EnsureDB(db, cfg.DbCreds.DbName, &Post{}); err != nil {
+		log.Fatalf("%s db creation failed: %v\n", cfg.DbCreds.DbName, err)
 	} else {
-		log.Println("db exists")
-	}
-
-	// Migrate the schema
-	err = db.AutoMigrate(&Post{})
-	if err != nil {
-		log.Fatalf("db connection failed: %v\n", err)
+		log.Printf("%s db exists\n", cfg.DbCreds.DbName)
 	}
 
 	log.Printf("Listening at %s\n", cfg.Addr)
