@@ -17,20 +17,26 @@ var addr string = "127.0.0.1:80"
 func createPost(c pb.CrudServiceClient) {
 	log.Println("createPost was invoked")
 
-	res, err := c.CreatePost(context.Background(), &pb.Post{})
+	res, err := c.CreatePost(context.Background(), &pb.Post{
+		Id:          "321",
+		AuthorId:    "Jose",
+		Title:       "Gone With the Wind",
+		Description: "Humpty dumpy",
+		FullText:    "In the beginning...",
+	})
 	if err != nil {
 		e, ok := status.FromError(err)
 		if ok {
 			log.Printf("Error message from server: %v\n", e.Message())
-			log.Println(e.Code())
+			log.Println("Code: ", e.Code())
 
 			if e.Code() == codes.InvalidArgument {
 				log.Println("We probably sent a negative number!")
-				return
 			}
 		} else {
 			log.Fatalf("A non gRPC error: %v\n", err)
 		}
+		return
 	}
 
 	log.Printf("CreatePost response: %v\n", res)

@@ -137,6 +137,9 @@ func main() {
 		log.Fatalf("db connection failed: %v\n", err)
 	}
 
+	// TODO: this is solely for development to eliminate cumulative state
+	DeleteDb(db, "posts")
+
 	if err = EnsureDB(db, "posts"); err != nil {
 		log.Fatalf("db creation failed: %v\n", err)
 	} else {
@@ -144,7 +147,7 @@ func main() {
 	}
 
 	// Migrate the schema
-	err = db.AutoMigrate(&pb.Post{})
+	err = db.AutoMigrate(&Post{})
 	if err != nil {
 		log.Fatalf("db connection failed: %v\n", err)
 	}

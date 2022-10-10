@@ -10,11 +10,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// TODO: move to db layer in separate package
+// TODO: move this file to db layer in separate package
 
 type Post struct {
 	gorm.Model         // Adds an ID field
-	Id          string `json:"id,omitempty"`
+	PostId      string `json:"post_id,omitempty"`
 	AuthorId    string `json:"author_id,omitempty"`
 	Title       string `json:"title,omitempty"`
 	Description string `json:"description,omitempty"`
@@ -23,11 +23,21 @@ type Post struct {
 
 func NewPost(pbPost *pb.Post) Post {
 	return Post{
-		Id:          pbPost.Id,
+		PostId:      pbPost.Id,
 		AuthorId:    pbPost.AuthorId,
 		Title:       pbPost.Title,
 		Description: pbPost.Description,
 		FullText:    pbPost.FullText,
+	}
+}
+
+func NewPbPost(post *Post) pb.Post {
+	return pb.Post{
+		Id:          post.PostId,
+		AuthorId:    post.AuthorId,
+		Title:       post.Title,
+		Description: post.Description,
+		FullText:    post.FullText,
 	}
 }
 
@@ -41,6 +51,13 @@ func Connect(creds *DBCreds) (*gorm.DB, error) {
 		DSN:                  dsn,
 		PreferSimpleProtocol: true, // disables implicit prepared statement usage
 	}), &gorm.Config{})
+}
+
+func DeleteDb(db *gorm.DB, dbName string) {
+	tx := db.Exec(fmt.Sprintf("DROP DATABASE %s;", dbName))
+	if tx.Error != nil {
+		log.Printf("DeleteDB error: %v\n", tx.Error)
+	}
 }
 
 func EnsureDB(db *gorm.DB, dbName string) error {
