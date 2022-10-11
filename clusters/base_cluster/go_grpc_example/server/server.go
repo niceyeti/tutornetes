@@ -18,7 +18,7 @@ func (s *Server) CreatePost(ctx context.Context, post *pb.Post) (*pb.PostID, err
 	log.Printf("CreatePost invoked\n")
 
 	dto := NewPost(post)
-	//dto.ID = 345
+	dto.ID = 353
 	// TODO: review gorm docs and convention, I'm flying by the seat of my pants. ID should (?) autoincrement.
 	tx := s.db.
 		WithContext(ctx).
@@ -38,14 +38,14 @@ func (s *Server) ReadPost(ctx context.Context, postID *pb.PostID) (*pb.Post, err
 	post := &Post{}
 	tx := s.db.
 		WithContext(ctx).
-		Where("post_id = ?", postID).
+		Where("id = ?", postID.Id).
 		First(&post)
 	if tx.Error != nil {
 		log.Printf("error in ReadPost: %v\n", tx.Error)
 		return nil, tx.Error
 	}
-	pbPost := NewPbPost(post)
 
+	pbPost := NewPbPost(post)
 	return &pbPost, nil
 }
 

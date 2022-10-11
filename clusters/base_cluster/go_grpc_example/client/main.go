@@ -1,3 +1,6 @@
+// The Client implementation here is purely for manual testing and development.
+// It merely exercises the CRUD api of the gRPC Post service.
+
 package main
 
 import (
@@ -14,7 +17,16 @@ import (
 
 var addr string = "127.0.0.1:80"
 
-func createPost(c pb.CrudServiceClient) {
+func readPost(c pb.CrudServiceClient, postId *pb.PostID) {
+	log.Println("readPost was invoked")
+
+	res, err := c.ReadPost(context.Background(), postId)
+	logErr(err)
+
+	log.Printf("ReadPost response: %v\n", res)
+}
+
+func createPost(c pb.CrudServiceClient) *pb.PostID {
 	log.Println("createPost was invoked")
 
 	res, err := c.CreatePost(context.Background(), &pb.Post{
@@ -24,22 +36,29 @@ func createPost(c pb.CrudServiceClient) {
 		Description: "Humpty dumpy",
 		FullText:    "In the beginning...",
 	})
-	if err != nil {
-		e, ok := status.FromError(err)
-		if ok {
-			log.Printf("Error message from server: %v\n", e.Message())
-			log.Println("Code: ", e.Code())
+	logErr(err)
 
-			if e.Code() == codes.InvalidArgument {
-				log.Println("We probably sent a negative number!")
-			}
-		} else {
-			log.Fatalf("A non gRPC error: %v\n", err)
-		}
+	log.Printf("CreatePost response: %v\n", res)
+	return res
+}
+
+func logErr(err error) {
+	if err == nil {
 		return
 	}
 
-	log.Printf("CreatePost response: %v\n", res)
+	e, ok := status.FromError(err)
+	if ok {
+		log.Printf("Error message from server: %v\n", e.Message())
+		log.Println("Code: ", e.Code())
+		log.Println("Error: ", e.String())
+		if e.Code() == codes.InvalidArgument {
+			log.Println("We probably sent a negative number!")
+		}
+	} else {
+		log.Printf("A non gRPC error: %v\n", err)
+	}
+	log.Fatalf("client dying a cowardly end :(")
 }
 
 func main() {
@@ -49,7 +68,8 @@ func main() {
 	}
 
 	defer conn.Close()
-	c := pb.NewCrudServiceClient(conn)
+	cli := pb.NewCrudServiceClient(conn)
 
-	createPost(c)
+	postId := createPost(cli)
+	readPost(cli, postId)
 }

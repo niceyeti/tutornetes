@@ -58,6 +58,8 @@ Developing with the db, on host and no k3d cluster:
 2) Run `make all`
 3) Run the server (lazy way with env vars):
     * export DB_USER=niceyeti; export DB_PASSWORD=niceyeti; export DB_HOST=172.17.0.1; export DB_PORT=5432; ./bin/server
+4) Debug using this:
+    * DB_USER=niceyeti DB_PASSWORD=niceyeti DB_HOST=172.17.0.1 DB_PORT=5432 dlv debug main.go
 
 ### The Database
 

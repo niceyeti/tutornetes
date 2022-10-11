@@ -45,7 +45,7 @@ test: ## Launch tests
 
 bump: cproto go.mod go.sum ## Update packages version
 	go get -u ./...
-	@echo "  ^---Ignoring github.com/golang/protobuf deprecation warning. TODO: address the dep warning." && echo
+	@echo && echo "  ^---Ignoring github.com/golang/protobuf deprecation warning. TODO: address the dep warning." && echo
 
 about: ## Display info related to the build
 	@echo "OS: ${OS}"
