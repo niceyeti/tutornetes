@@ -91,7 +91,7 @@ func main() {
 	}
 
 	// TODO: deletion is solely for development to eliminate cumulative state
-	DeleteDb(db, cfg.DbCreds.DbName)
+	DeleteDb(db, cfg.DbCreds.DbName, PostsTable)
 
 	if err = EnsureDB(db, cfg.DbCreds.DbName, &Post{}); err != nil {
 		log.Fatalf("%s db creation failed: %v\n", cfg.DbCreds.DbName, err)

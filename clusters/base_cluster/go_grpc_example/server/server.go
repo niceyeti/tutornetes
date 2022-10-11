@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"strconv"
 
 	pb "go_grpc_example/proto"
 
@@ -20,8 +20,6 @@ func (s *Server) CreatePost(ctx context.Context, post *pb.Post) (*pb.PostID, err
 	log.Printf("CreatePost invoked\n")
 
 	dto := NewPost(post)
-	dto.ID = 353
-	// TODO: review gorm docs and convention, I'm flying by the seat of my pants. ID should (?) autoincrement.
 	tx := s.db.
 		WithContext(ctx).
 		Create(&dto)
@@ -30,7 +28,7 @@ func (s *Server) CreatePost(ctx context.Context, post *pb.Post) (*pb.PostID, err
 	}
 
 	return &pb.PostID{
-		Id: strconv.FormatUint(uint64(dto.ID), 10),
+		Id: dto.PostId,
 	}, nil
 }
 
@@ -40,7 +38,7 @@ func (s *Server) ReadPost(ctx context.Context, postID *pb.PostID) (*pb.Post, err
 	post := &Post{}
 	tx := s.db.
 		WithContext(ctx).
-		Where("id = ?", postID.Id).
+		Where("post_id = ?", postID.Id).
 		First(&post)
 	if tx.Error != nil {
 		log.Printf("error in ReadPost: %v\n", tx.Error)
@@ -52,33 +50,45 @@ func (s *Server) ReadPost(ctx context.Context, postID *pb.PostID) (*pb.Post, err
 }
 
 // UpdatePost
-func (s *Server) UpdatePost(ctx context.Context, post *Post) (*empty.Empty, error) {
+func (s *Server) UpdatePost(ctx context.Context, pbPost *pb.Post) (*empty.Empty, error) {
+	log.Printf("UpdatePost invoked\n")
+
+	post := NewPost(pbPost)
 	dest := &Post{}
-	tx := s.db.First(dest, post.ID)
+	tx := s.db.
+		WithContext(ctx).
+		Where("post_id = ?", post.PostId).
+		First(dest)
 	if tx.Error != nil {
+		log.Printf("error in UpdatePost: %v\n", tx.Error)
 		return &empty.Empty{}, tx.Error
 	}
 
-	// No changes needed, just return
-	if !Merge(post, dest) {
+	post.ID = dest.ID
+	if !Merge(&post, dest) {
+		// No changes received, so just return
+		log.Println("no post changes in UpdatePost, returning")
 		return &empty.Empty{}, nil
 	}
 
+	log.Println("new desc: " + fmt.Sprintf("%d ", dest.ID) + dest.Description)
 	tx = s.db.
 		WithContext(ctx).
 		Save(dest)
+
+	s.db.First(dest)
+
+	log.Printf("after update, got: %+v\n", dest)
+
 	return &empty.Empty{}, tx.Error
 }
 
 func (s *Server) DeletePost(ctx context.Context, postID *pb.PostID) (*empty.Empty, error) {
-	id, err := strconv.ParseUint(postID.Id, 10, 32)
-	if err != nil {
-		return &empty.Empty{}, err
-	}
-
 	tx := s.db.
 		WithContext(ctx).
-		Delete(&Post{}, id)
+		Where("post_id = ?", postID.Id).
+		Delete(&Post{})
+
 	return &empty.Empty{}, tx.Error
 }
 

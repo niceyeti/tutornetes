@@ -29,10 +29,11 @@ type DBCreds struct {
 type Post struct {
 	// Note: explicitly implementing these fields seems better than embedding gorm.Model. For one,
 	// this ensure the ID autoincrements, rather than requiring the service to generate ids.
-	ID        uint `gorm:"primaryKey;autoIncrement:true;unique" sql:"AUTO_INCREMENT"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	ID        uint           `gorm:"primaryKey;autoIncrement;uniqueIndex" json:"id,omitempty"`
+	CreatedAt time.Time      `json:"created_at,omitempty"`
+	UpdatedAt time.Time      `json:"updated_at,omitempty"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	//gorm.Model
 	// PostId is redundant wrt to ID, but seems about right to hide the internal id by default.
 	// Id's represent something to their consumer, in this case the app layer; hence it could be
 	// something like the hash of post fields, a concatenation of logical ones, whatever ones reqs.
@@ -78,20 +79,31 @@ func NewPbPost(post *Post) pb.Post {
 
 // Merge updates fields in dest with the non-empty fields of src.
 // The return value indicates if any update occurred.
+// Afterward, dest will contain the id, post-id, and other mandatory fields of src.
 func Merge(src, dest *Post) (updated bool) {
+	dest.ID = src.ID
+	dest.PostId = src.PostId
+	dest.CreatedAt = src.CreatedAt
+	dest.DeletedAt = src.DeletedAt
+	dest.UpdatedAt = src.UpdatedAt
+
 	if src.AuthorId != "" && src.AuthorId != dest.AuthorId {
+		log.Println("updating authorID")
 		dest.AuthorId = src.AuthorId
 		updated = true
 	}
 	if src.Description != "" && src.Description != dest.Description {
+		log.Println("updating description")
 		dest.Description = src.Description
 		updated = true
 	}
 	if src.FullText != "" && src.FullText != dest.FullText {
+		log.Println("updating fulltext")
 		dest.FullText = src.FullText
 		updated = true
 	}
 	if src.Title != "" && src.Title != dest.Title {
+		log.Println("updating title")
 		dest.Title = src.Title
 		updated = true
 	}
@@ -145,11 +157,17 @@ func Connect(creds *DBCreds) (*gorm.DB, error) {
 			}), &gorm.Config{})
 }
 
-func DeleteDb(db *gorm.DB, dbName string) {
-	log.Println("WARNING: deleting existing db, if it exists. This is only for development.")
-	tx := db.Exec(fmt.Sprintf("DROP DATABASE %s;", dbName))
+func DeleteDb(db *gorm.DB, dbName, tableName string) {
+	log.Println("WARNING: deleting existing table, if it exists. This is only for development.")
+	tx := db.Exec(fmt.Sprintf("DROP TABLE %s;", tableName))
 	if tx.Error != nil {
-		log.Printf("DeleteDB error: %v\n", tx.Error)
+		log.Printf("DeleteDB dropping table %s: %v\n", tableName, tx.Error)
+	}
+
+	log.Println("WARNING: deleting existing db, if it exists. This is only for development.")
+	tx = db.Exec(fmt.Sprintf("DROP DATABASE %s;", dbName))
+	if tx.Error != nil {
+		log.Printf("DeleteDB error dropping db %s: %v\n", dbName, tx.Error)
 	}
 }
 

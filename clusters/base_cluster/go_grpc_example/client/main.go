@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -17,13 +18,26 @@ import (
 
 var addr string = "127.0.0.1:80"
 
-func readPost(c pb.CrudServiceClient, postId *pb.PostID) {
+func readPost(c pb.CrudServiceClient, postId *pb.PostID) *pb.Post {
 	log.Println("readPost was invoked")
 
 	res, err := c.ReadPost(context.Background(), postId)
 	logErr(err)
 
 	log.Printf("ReadPost response: %v\n", res)
+	return res
+}
+
+func deletePost(c pb.CrudServiceClient, postId *pb.PostID) bool {
+	_, err := c.DeletePost(context.Background(), postId)
+	logErr(err)
+	return err == nil
+}
+
+func updatePost(c pb.CrudServiceClient, post *pb.Post) bool {
+	_, err := c.UpdatePost(context.Background(), post)
+	logErr(err)
+	return err == nil
 }
 
 func createPost(c pb.CrudServiceClient) *pb.PostID {
@@ -71,5 +85,22 @@ func main() {
 	cli := pb.NewCrudServiceClient(conn)
 
 	postId := createPost(cli)
-	readPost(cli, postId)
+	post := readPost(cli, postId)
+
+	post.Description = post.Description + " " + time.Now().Format(time.RFC3339)
+	if updatePost(cli, post) {
+		log.Println("post updated successfully")
+	} else {
+		log.Println("post update FAILED")
+	}
+
+	_ = readPost(cli, postId)
+
+	if deletePost(cli, postId) {
+		log.Printf("deletion of %s succeeded\n", postId)
+	} else {
+		log.Printf("deletion of %s FAILED\n", postId)
+	}
+
+	_ = readPost(cli, postId)
 }
