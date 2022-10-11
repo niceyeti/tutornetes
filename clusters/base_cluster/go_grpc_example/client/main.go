@@ -100,7 +100,9 @@ func main() {
 		log.Printf("deletion of %s succeeded\n", postId)
 	} else {
 		log.Printf("deletion of %s FAILED\n", postId)
+		return
 	}
 
+	// This is expected to fail, if the post was successfully deleted
 	_ = readPost(cli, postId)
 }
