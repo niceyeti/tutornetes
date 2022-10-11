@@ -1,6 +1,6 @@
 BIN_DIR = bin
 PROTO_DIR = proto
-SERVER_DIR = server
+SERVER_DIR = service
 CLIENT_DIR = client
 
 SHELL := bash
@@ -46,6 +46,7 @@ test: ## Launch tests
 bump: cproto go.mod go.sum ## Update packages version
 	go get -u ./...
 	@echo && echo "  ^---Ignoring github.com/golang/protobuf deprecation warning. TODO: address the dep warning." && echo
+	go mod tidy
 
 about: ## Display info related to the build
 	@echo "OS: ${OS}"

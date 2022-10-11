@@ -1,4 +1,4 @@
-package main
+package endpoints
 
 import (
 	"context"
@@ -16,6 +16,12 @@ type Server struct {
 	pb.UnimplementedCrudServiceServer
 }
 
+// NewServer returns a server given the passed db.
+func NewServer(db *gorm.DB) *Server {
+	return &Server{db: db}
+}
+
+// CreatePost creates and persists the passed post.
 func (s *Server) CreatePost(ctx context.Context, post *pb.Post) (*pb.PostID, error) {
 	log.Printf("CreatePost invoked\n")
 
@@ -32,6 +38,7 @@ func (s *Server) CreatePost(ctx context.Context, post *pb.Post) (*pb.PostID, err
 	}, nil
 }
 
+// ReadPost returns the Post with the associated post-id.
 func (s *Server) ReadPost(ctx context.Context, postID *pb.PostID) (*pb.Post, error) {
 	log.Printf("ReadPost invoked\n")
 
@@ -49,7 +56,7 @@ func (s *Server) ReadPost(ctx context.Context, postID *pb.PostID) (*pb.Post, err
 	return &pbPost, nil
 }
 
-// UpdatePost
+// UpdatePost updates the passed post with whatever fields are non-empty and differ from the existing ones.
 func (s *Server) UpdatePost(ctx context.Context, pbPost *pb.Post) (*empty.Empty, error) {
 	log.Printf("UpdatePost invoked\n")
 
@@ -83,6 +90,7 @@ func (s *Server) UpdatePost(ctx context.Context, pbPost *pb.Post) (*empty.Empty,
 	return &empty.Empty{}, tx.Error
 }
 
+// DeletePost deletes the post with the passed post-id.
 func (s *Server) DeletePost(ctx context.Context, postID *pb.PostID) (*empty.Empty, error) {
 	tx := s.db.
 		WithContext(ctx).
@@ -93,8 +101,9 @@ func (s *Server) DeletePost(ctx context.Context, postID *pb.PostID) (*empty.Empt
 }
 
 // ListPosts streams all of the posts.
-// Obviously this could take a where-type clause or other query, omitted for simplicity.
+// FUTURE: this could take a where-type clause or other query, omitted for simplicity.
 func (s *Server) ListPosts(_ *empty.Empty, lps pb.CrudService_ListPostsServer) error {
+	log.Println("ListPosts invoked")
 
 	rows, err := s.db.
 		Model(&Post{}).
@@ -119,22 +128,3 @@ func (s *Server) ListPosts(_ *empty.Empty, lps pb.CrudService_ListPostsServer) e
 
 	return nil
 }
-
-/*
-func (*Server) (ctx context.Context, req *pb.SqrtRequest) (*pb.SqrtResponse, error) {
-	log.Printf("Sqrt was invoked with number %d\n", req.Number)
-
-	number := req.Number
-
-	if number < 0 {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			fmt.Sprintf("Received a negative number: %d", number),
-		)
-	}
-
-	return &pb.SqrtResponse{
-		Result: math.Sqrt(float64(number)),
-	}, nil
-}
-*/

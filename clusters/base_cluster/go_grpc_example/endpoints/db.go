@@ -1,4 +1,4 @@
-package main
+package endpoints
 
 import (
 	"fmt"
@@ -111,13 +111,13 @@ func Merge(src, dest *Post) (updated bool) {
 }
 
 func ReadDBConfig() (*DBCreds, error) {
-	dbHost := getEnv(DB_HOST, DB_HOST_DEFAULT)
-	dbPort := getEnv(DB_PORT, DB_PORT_DEFAULT)
+	dbHost := GetEnv(DB_HOST, DB_HOST_DEFAULT)
+	dbPort := GetEnv(DB_PORT, DB_PORT_DEFAULT)
 
 	var err error
-	dbUser := getEnv(DB_USER, "")
+	dbUser := GetEnv(DB_USER, "")
 	if dbUser == "" {
-		dbUser, err = getTrimmedConfig(DB_USER_PATH, "")
+		dbUser, err = GetTrimmedConfig(DB_USER_PATH, "")
 		if err != nil {
 			return nil, err
 		}
@@ -125,9 +125,9 @@ func ReadDBConfig() (*DBCreds, error) {
 		log.Println("Warning: db cred taken from insecure env. In prod, creds should be transferred via tempfs instead.")
 	}
 
-	dbPass := getEnv(DB_PASSWORD, "")
+	dbPass := GetEnv(DB_PASSWORD, "")
 	if dbPass == "" {
-		dbPass, err = getTrimmedConfig(DB_PASS_PATH, "")
+		dbPass, err = GetTrimmedConfig(DB_PASS_PATH, "")
 		if err != nil {
 			return nil, err
 		}

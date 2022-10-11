@@ -1,4 +1,7 @@
-package dockertestpsql_test
+//go:build integration
+// +build integration
+
+package integration_testing
 
 import (
 	"database/sql"
@@ -15,21 +18,23 @@ import (
 
 var db *sql.DB
 
-func TestMain(m *testing.M) {
+func TestServer(m *testing.M) {
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 
+	dbCreds := DB
+
 	// pulls an image, creates a container based on it and runs it
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "postgres",
 		Tag:        "11",
 		Env: []string{
-			"POSTGRES_PASSWORD=secret",
-			"POSTGRES_USER=user_name",
-			"POSTGRES_DB=dbname",
+			"POSTGRES_PASSWORD=knockknock",
+			"POSTGRES_USER=niceyeti",
+			"POSTGRES_DB=posts",
 			"listen_addresses = '*'",
 		},
 	}, func(config *docker.HostConfig) {
@@ -42,7 +47,9 @@ func TestMain(m *testing.M) {
 	}
 
 	hostAndPort := resource.GetHostPort("5432/tcp")
-	databaseUrl := fmt.Sprintf("postgres://user_name:secret@%s/dbname?sslmode=disable", hostAndPort)
+	databaseUrl := fmt.Sprintf("postgres://user_name:secret@%s/dbname?sslmode=disable",
+		hostAndPort,
+	)
 
 	log.Println("Connecting to database on url: ", databaseUrl)
 
