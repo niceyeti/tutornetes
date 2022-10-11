@@ -57,7 +57,7 @@ Developing with the db, on host and no k3d cluster:
     * `docker run -itd -e POSTGRES_USER=niceyeti -e POSTGRES_PASSWORD=niceyeti -p 5432:5432 -v /data:/var/lib/postgresql/data --name postgresql postgres`
 2) Run `make all`
 3) Run the server (lazy way with env vars):
-    * export DB_USER=niceyeti; export DB_PASSWORD=niceyeti; export DB_HOST=172.17.0.1; export DB_PORT=5432; export DEV=true; ./bin/server
+    * export DB_USER=niceyeti; export DB_PASSWORD=niceyeti; export DB_HOST=172.17.0.1; export DB_PORT=5432; export DEV=true; ./bin/service
 4) Debug using this:
     * DB_USER=niceyeti DB_PASSWORD=niceyeti DB_HOST=172.17.0.1 DB_PORT=5432 dlv debug main.go
 
@@ -75,8 +75,6 @@ In most cases an external db carries with it its own custom requirements and coo
 Test strategy:
 1) factor out as many interfaces as possible to pull them into fast unit tests
 2) integration testing with the db: annotate the integration test file so it can be toggled via build flags.
-
-
 
 ### The Database
 
@@ -113,6 +111,6 @@ Port pings:
 These are purely ideas for practice/job-prep.
 - Write and add a cache to the service
 - Refactor apps layers and compare with other grpc app layouts
-- kube-ify the app, with kubes based tests. basically try to develop the most advanced and smooth
+- kube-ify the app, with kubes based tests. Basically try to develop the most advanced and smooth
   devops workflow using tilt and by fully parameterizing the application wrt the db and so on.
 - Implement all timing requirements (grpc timeouts, grpc.ServerOptions, etc). None are specified.
