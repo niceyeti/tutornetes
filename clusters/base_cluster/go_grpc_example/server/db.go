@@ -76,6 +76,28 @@ func NewPbPost(post *Post) pb.Post {
 	}
 }
 
+// Merge updates fields in dest with the non-empty fields of src.
+// The return value indicates if any update occurred.
+func Merge(src, dest *Post) (updated bool) {
+	if src.AuthorId != "" && src.AuthorId != dest.AuthorId {
+		dest.AuthorId = src.AuthorId
+		updated = true
+	}
+	if src.Description != "" && src.Description != dest.Description {
+		dest.Description = src.Description
+		updated = true
+	}
+	if src.FullText != "" && src.FullText != dest.FullText {
+		dest.FullText = src.FullText
+		updated = true
+	}
+	if src.Title != "" && src.Title != dest.Title {
+		dest.Title = src.Title
+		updated = true
+	}
+	return
+}
+
 func ReadDBConfig() (*DBCreds, error) {
 	dbHost := getEnv(DB_HOST, DB_HOST_DEFAULT)
 	dbPort := getEnv(DB_PORT, DB_PORT_DEFAULT)
