@@ -149,6 +149,8 @@ func Connect(creds *DBCreds) (*gorm.DB, error) {
 		creds.User,
 		creds.Pass,
 		creds.Addr)
+	log.Println("Connecting to dsn " + dsn)
+
 	return gorm.Open(
 		postgres.New(
 			postgres.Config{

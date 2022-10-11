@@ -1,4 +1,4 @@
-//go:build integration
+// TODO: add build tags here. Currently a tag here disables gopls and intellisense, not sure why.
 
 package integration_test
 
@@ -6,7 +6,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,15 +20,15 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	//"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	//"google.golang.org/grpc/codes"
 	//"google.golang.org/grpc/status"
 )
 
 const (
 	DB_USER   = "niceyeti"
 	DB_PASSWD = "knockknock"
-	addr      = "127.0.0.1:80"
+	SVC_ADDR  = "127.0.0.1:8080"
 )
 
 var (
@@ -60,11 +62,11 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not start resource: %s", err)
 	}
 
-	hostAndPort := resource.GetHostPort("5432/tcp")
+	dbAddr := resource.GetHostPort("5432/tcp")
 	databaseUrl := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
 		DB_USER,
 		DB_PASSWD,
-		hostAndPort,
+		dbAddr,
 		ep.DBName)
 
 	log.Println("Connecting to database on url: ", databaseUrl)
@@ -83,18 +85,67 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 
+	// Set up the gRPC service
+	cfg := ep.AppConfig{
+		Addr: SVC_ADDR,
+		Cert: "",
+		Key:  "",
+		DbCreds: ep.DBCreds{
+			DbName: ep.DBName,
+			Addr:   dbAddr,
+			User:   DB_USER,
+			Pass:   DB_PASSWD,
+		},
+	}
+
+	lis, err := net.Listen("tcp", cfg.Addr)
+	if err != nil {
+		log.Fatalf("Failed to listen: %v\n", err)
+	}
+
+	db, err := ep.Connect(&cfg.DbCreds)
+	if err != nil {
+		log.Fatalf("db connection failed: %v\n", err)
+	}
+
+	// Delete the existing db/tables, if any
+	ep.DeleteDb(db, cfg.DbCreds.DbName, ep.PostsTable)
+
+	if err = ep.EnsureDB(db, cfg.DbCreds.DbName, &ep.Post{}); err != nil {
+		log.Fatalf("%s db creation failed: %v\n", cfg.DbCreds.DbName, err)
+	} else {
+		log.Printf("%s db exists\n", cfg.DbCreds.DbName)
+	}
+
+	log.Printf("Listening at %s\n", cfg.Addr)
+
+	opts := []grpc.ServerOption{}
+	gs := grpc.NewServer(opts...)
+	ep := ep.NewServer(db)
+	pb.RegisterCrudServiceServer(gs, ep)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		wg.Done()
+		if err := gs.Serve(lis); err != nil {
+			log.Fatalf("Failed to serve: %v\n", err)
+		}
+	}()
+	wg.Wait()
+
 	// Set up grpc client
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(SVC_ADDR, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Did not connect: %v\n", err)
 	}
 	defer conn.Close()
 	client = pb.NewCrudServiceClient(conn)
 
-	// Set up server
-
 	// Run tests
 	code := m.Run()
+
+	gs.GracefulStop()
 
 	// You can't defer this because os.Exit doesn't care for defer
 	if err := pool.Purge(resource); err != nil {
