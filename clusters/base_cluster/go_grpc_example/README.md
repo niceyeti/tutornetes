@@ -61,6 +61,25 @@ Developing with the db, on host and no k3d cluster:
 4) Debug using this:
     * DB_USER=niceyeti DB_PASSWORD=niceyeti DB_HOST=172.17.0.1 DB_PORT=5432 dlv debug main.go
 
+### Smoother Workflow
+
+Due to the fact that the database contains state, although one could deploy a postgres container
+in the cluster and develop by setting up a tiltfile, its actually somewhat easier for the sake of a
+mere demo to develop locally using the manual steps above for starters, then using ORY to develop
+using integration-driven development. The complexity is due to:
+1) db state
+2) client and server testing
+
+In most cases an external db carries with it its own custom requirements and coordination with its dba.
+
+Test strategy:
+1) factor out as many interfaces as possible to pull them into fast unit tests
+2) integration testing with the db: annotate the integration test file so it can be toggled via build flags.
+
+
+
+
+
 ### The Database
 
 The database is merely for demonstration purposes and playing with gorm,
