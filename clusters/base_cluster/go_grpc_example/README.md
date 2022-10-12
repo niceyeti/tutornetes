@@ -85,6 +85,11 @@ NOTE: the code here is not batteries-included.
 It is not free from sql-injection, has no fluent validation checks, nor did I fully review the gorm docs.
 There could be much to gain in terms of cleaner implementation, layering, security, connection management, and so on.
 
+#### Concurrency and Races
+Note that very little consideration was given to concurrency requirements in the service,
+since I only test the CRUD interfaces serially, one by one. There are many considerations
+that should be considered, to use a Kamalism.
+
 #### Time
 Time is highly important in a real database, whereas I am simply using time.Time fields of gorm.
 Still, you always want to know the impact of the types of time fields used, 8601/3339 format considerations,

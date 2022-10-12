@@ -11,6 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO: I left out a HUGE service requirement because the goal was merely to
+// learn gRPC itself. The service needs locking and other concurrency reqs
+// need to be considered and implemented.
 type Server struct {
 	db *gorm.DB
 	pb.UnimplementedCrudServiceServer
