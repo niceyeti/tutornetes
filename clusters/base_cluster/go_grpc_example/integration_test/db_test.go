@@ -11,9 +11,15 @@
 // - request an unexpected thing
 // - request with a canceled context
 // - idempotence: request a thing/action twice (create twice, update twice, etc)
-// - ListPosts not exercised
+// - ListPosts not exercised/tested
 // - add a built tag to this test '+integration'. Currently this causes gopls to stop operating on
 //   this file, because I didn't spend any time researching the issue (e.g. gopls settings).
+// Also before basing gRPC endpoint dev/test on this example, poke around for other feedback
+// and test/dev projects. This integration test is minimally-effective yet very heavy; intuition tells
+// us that there are probably more efficient test/dev strategies, and slick libraries for gRPC testing
+// akin to the ease of the httptest library.
+// One obvious observation is that the db should be injected into the gRPC service so the service
+// can be tested without the db, reducing potential test to mere milliseconds instead of seconds/minutes.
 
 package integration_test
 
@@ -42,9 +48,10 @@ import (
 )
 
 const (
-	DB_USER   = "niceyeti"
-	DB_PASSWD = "knockknock"
-	SVC_ADDR  = "127.0.0.1:8080"
+	DB_USER       = "niceyeti"
+	DB_PASSWD     = "knockknock"
+	SVC_ADDR      = "127.0.0.1:8080"
+	maxRunTimeSec = 60
 )
 
 var (
@@ -52,10 +59,10 @@ var (
 	client pb.CrudServiceClient
 )
 
+// This is based on a dockertest postgres example.
+// See: https://github.com/ory/dockertest/blob/fd10436b9492d54cdd1880038ec4e48a217bc440/examples/PostgreSQL.md
 func TestMain(m *testing.M) {
 	log.Println("Setting up test resources")
-
-	fmt.Println("wah?")
 
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 	pool, err := dockertest.NewPool("")
@@ -92,11 +99,13 @@ func TestMain(m *testing.M) {
 	log.Println("Connecting to database on url: ", databaseUrl)
 	log.Println("Using dbAddr: " + dbAddr)
 
-	resource.Expire(20) // Tell docker to hard kill the container in 120 seconds
+	err = resource.Expire(maxRunTimeSec) // Tell docker to hard kill the container in 120 seconds
+	if err != nil {
+		log.Fatalf("Failed to set resource expiration time")
+	}
 
-	// TODO: reset to 120s, and expiration above
 	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
-	pool.MaxWait = 10 * time.Second
+	pool.MaxWait = maxRunTimeSec * time.Second
 	if err = pool.Retry(func() error {
 		db, err = sql.Open("postgres", databaseUrl)
 		if err != nil {
@@ -157,9 +166,12 @@ func TestMain(m *testing.M) {
 	}()
 	wg.Wait()
 	time.Sleep(time.Millisecond * 50)
+	defer gs.GracefulStop()
 
 	// Set up grpc client
-	conn, err := grpc.Dial(SVC_ADDR, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(
+		SVC_ADDR,
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Did not connect: %v\n", err)
 	}
@@ -180,14 +192,19 @@ func TestMain(m *testing.M) {
 		log.Println(err)
 	}
 
+	// Note: os.Exit does not honor deferred functions. Those deferred above are deferred for
+	// the sake of panics, for which they will still be called. Calling os.Exit is bad practice
+	// as exit requirements are no longer clear (will this test consume resources on a build server
+	// for repeated runs? etc). The use of os.Exit was simply in the dockertest example.
+	// FUTURE: fix or evaluate.
 	os.Exit(code)
 }
 
 func TestCreatePost(t *testing.T) {
 	t.Log("createPost was invoked")
 	post := &pb.Post{
-		Id:          "321123",
-		AuthorId:    "Jose",
+		Id:          "createdpost",
+		AuthorId:    "DonJuan",
 		Title:       "Gone With the Wind",
 		Description: "Humpty dumpy",
 		FullText:    "In the beginning...",
@@ -199,7 +216,7 @@ func TestCreatePost(t *testing.T) {
 		So(res.Id, ShouldEqual, post.Id)
 	})
 
-	// FUTURE: ensure duplicate posts cannot be created
+	// FUTURE: verify duplicate posts cannot be created
 	//Convey("CreatePost tests", t, func() {
 	//	res, err := client.CreatePost(context.Background(), post)
 	//	log.Printf("CreatePost response: %v\n", res)
@@ -211,8 +228,8 @@ func TestCreatePost(t *testing.T) {
 
 func TestReadPost(t *testing.T) {
 	post := &pb.Post{
-		Id:          "321123",
-		AuthorId:    "Jose",
+		Id:          "readpost",
+		AuthorId:    "DonJuan",
 		Title:       "Gone With the Wind",
 		Description: "Humpty dumpy",
 		FullText:    "In the beginning...",
@@ -223,7 +240,7 @@ func TestReadPost(t *testing.T) {
 			resultPost, err := client.ReadPost(context.Background(), &pb.PostID{Id: "junk"})
 			So(resultPost, ShouldBeNil)
 			// TODO: comparing error strings is poor practice and indicates that the api should be refactored.
-			// Leaving as-is because this app is purely a demo. But in practice the api should specify its
+			// Leaving as-is because this app is purely a demo. In practice, the api should specify its
 			// errors as first-class definitions, e.g. ErrPostNotFound, per golang error best-practices.
 			So(err.Error(), ShouldEqual, "rpc error: code = Unknown desc = record not found")
 		})
@@ -265,8 +282,8 @@ func TestReadPost(t *testing.T) {
 
 func TestUpdatePost(t *testing.T) {
 	post := &pb.Post{
-		Id:          "321123",
-		AuthorId:    "Jose",
+		Id:          "updatedpost",
+		AuthorId:    "DonJuan",
 		Title:       "Gone With the Wind",
 		Description: "Humpty dumpy",
 		FullText:    "In the beginning...",
@@ -299,8 +316,8 @@ func TestUpdatePost(t *testing.T) {
 
 func TestDeletePost(t *testing.T) {
 	post := &pb.Post{
-		Id:          "321123",
-		AuthorId:    "Jose",
+		Id:          "deletedpost",
+		AuthorId:    "DonJuan",
 		Title:       "Gone With the Wind",
 		Description: "Humpty dumpy",
 		FullText:    "In the beginning...",
