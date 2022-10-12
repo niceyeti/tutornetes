@@ -145,10 +145,11 @@ func ReadDBConfig() (*DBCreds, error) {
 
 // Connect returns a gorm.DB for the passed creds.
 func Connect(creds *DBCreds) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s", ///posts?sslmode=disable",
+	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s", ///posts?sslmode=disable",
 		creds.User,
 		creds.Pass,
-		creds.Addr)
+		creds.Addr,
+		creds.DbName)
 	log.Println("Connecting to dsn " + dsn)
 
 	return gorm.Open(

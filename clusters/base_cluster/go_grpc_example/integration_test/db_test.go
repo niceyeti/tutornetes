@@ -21,8 +21,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	//"google.golang.org/grpc/codes"
-	//"google.golang.org/grpc/status"
 )
 
 const (
@@ -37,6 +35,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	log.Println("Setting up test resources")
+
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 	pool, err := dockertest.NewPool("")
 	if err != nil {
@@ -70,6 +70,7 @@ func TestMain(m *testing.M) {
 		ep.DBName)
 
 	log.Println("Connecting to database on url: ", databaseUrl)
+	log.Println("Using dbAddr: " + dbAddr)
 
 	resource.Expire(120) // Tell docker to hard kill the container in 120 seconds
 
@@ -98,11 +99,6 @@ func TestMain(m *testing.M) {
 		},
 	}
 
-	lis, err := net.Listen("tcp", cfg.Addr)
-	if err != nil {
-		log.Fatalf("Failed to listen: %v\n", err)
-	}
-
 	db, err := ep.Connect(&cfg.DbCreds)
 	if err != nil {
 		log.Fatalf("db connection failed: %v\n", err)
@@ -115,6 +111,11 @@ func TestMain(m *testing.M) {
 		log.Fatalf("%s db creation failed: %v\n", cfg.DbCreds.DbName, err)
 	} else {
 		log.Printf("%s db exists\n", cfg.DbCreds.DbName)
+	}
+
+	lis, err := net.Listen("tcp", cfg.Addr)
+	if err != nil {
+		log.Fatalf("Failed to listen: %v\n", err)
 	}
 
 	log.Printf("Listening at %s\n", cfg.Addr)
@@ -161,7 +162,7 @@ func TestMain(m *testing.M) {
 
 func TestCreate(t *testing.T) {
 	log.Println("createPost was invoked")
-
+	t.Log("blah")
 	post := &pb.Post{
 		Id:          "321123",
 		AuthorId:    "Jose",
@@ -171,6 +172,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	res, err := client.CreatePost(context.Background(), post)
+	log.Printf("CreatePost response: %v\n", res)
 	//logErr(err)
 	if err != nil {
 		t.Fatalf("uhohs! %v", err)
