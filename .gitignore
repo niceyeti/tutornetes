@@ -4,3 +4,4 @@ misc/istio-1.13.3/*
 !misc/istio-1.13.3/manifest.yaml
 **/.kubescape/
 **/bin/
+**.prof
