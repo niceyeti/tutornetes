@@ -6,8 +6,9 @@ backend services, in front of which is some http-based gateway-api.
 This app merely satisfied a few training goals in one:
 1) Build a basic gRPC api
 2) Back an app with postgres in a k8s cluster
+3) Implement a bare-bones integration test/workflow with dockertest
 
-The (unary) transactional nature of CRUD means this only uses a subset of the capability of gRPC.
+The (unary) transactional nature of a CRUD api means this only uses a subset of the capability of gRPC.
 Oh well.
 
 ### gRPC Use-Cases
@@ -24,8 +25,8 @@ and could almost yield itself to code-generation if specified within some constr
 provides a good way to think about such api's as mere layers in an infrastructure; and
 they should be trivialized as such. Focus instead on other aspects of technical debt.
 
-After completing this app, I almost err on the side of not adding gRPC endpoints to a platform unless they are native to it and well-understood by other developers and maintainers. In other words a prior organizational/team commitment.
- This may be an overstatement, and should simply be evaluated on a case-by-case basis. However, integrating gRPC/protoc into development and maintenance is a prime suspect for maintenance headaches for team mates without gRPC experience or are innocently unfamiliar with how it was set up in one's repo. The test, 
+After completing this app, I almost err on the side of not adding gRPC endpoints to a platform unless they are native to it and well-understood by other developers and maintainers. In other words gRPC requires a prior organizational/team commitment.
+ This may be an overstatement, and should simply be evaluated on a case-by-case basis. However, integrating gRPC/protoc into development and maintenance is a prime suspect for maintenance headaches for team mates without gRPC experience or who are innocently unfamiliar with how it was set up in one's repo. The test, 
 development, and maintenance plan must be defined, well-understood, and agreed upon by stakeholders.
 The point is that gRPC, though great, anticipates justified 'why have you added this?' feedback from feature-slaying, resource-conscientious managers :) . Though let's not forget gRPC's primary features
 w.r.t. http2, security, and performance. Some feedback:
@@ -85,7 +86,7 @@ noise; the latter is better because it allows one to scope what is benchmarked.
 
 With infinite leisure time, one could also compile and run the pprof http server into one's gRPC server code, run the server and query it in various ways, while monitoring stats from the pprof server.
 The gRPC-client could be used to automate various queries for ad-hoc benchmarking and system burden testing.
-This method could be implemented entirely within a benchmark integration-test, but doing probably
+This method could be implemented entirely within a benchmark integration-test, but doing so probably
 would not be supported by organizational resources.
 
 Concluding, just be familiar with the pprof tooling and how to interpret its outputs.
@@ -142,8 +143,8 @@ There could be much to gain in terms of cleaner implementation, layering, securi
 
 #### Concurrency and Races
 Note that very little consideration was given to concurrency requirements in the service,
-since I only test the CRUD interfaces serially, one by one. There are many considerations
-that should be considered, to use a Kamalism.
+since I only test the CRUD interfaces serially, one by one. To use a Kamalism, there are many considerations
+that should be considered.
 
 #### Time
 Time is highly important in a real database, whereas I am simply using time.Time fields of gorm.
@@ -175,7 +176,7 @@ Port pings:
 
 These are purely ideas for practice/job-prep.
 - Write and add a cache to the service
-- Refactor apps layers and compare with other grpc app layouts
+- Refactor app layers and compare with other grpc app layouts
 - kube-ify the app, with kubes based tests. Basically try to develop the most advanced and smooth
   devops workflow using tilt and by fully parameterizing the application wrt the db and so on.
 - Implement all timing requirements (grpc timeouts, grpc.ServerOptions, etc). None are specified.
