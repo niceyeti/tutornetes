@@ -105,6 +105,7 @@ func (s *Server) DeletePost(ctx context.Context, postID *pb.PostID) (*empty.Empt
 
 // ListPosts streams all of the posts.
 // FUTURE: this could take a where-type clause or other query, omitted for simplicity.
+// TODO: I never tested this.
 func (s *Server) ListPosts(_ *empty.Empty, lps pb.CrudService_ListPostsServer) error {
 	log.Println("ListPosts invoked")
 

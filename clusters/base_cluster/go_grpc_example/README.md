@@ -180,3 +180,25 @@ These are purely ideas for practice/job-prep.
 - kube-ify the app, with kubes based tests. Basically try to develop the most advanced and smooth
   devops workflow using tilt and by fully parameterizing the application wrt the db and so on.
 - Implement all timing requirements (grpc timeouts, grpc.ServerOptions, etc). None are specified.
+
+### Go gRPC Api Development Checklist
+
+Random incomplete thoughts on api development, much of which is universal/language-agnostic and based on experience (aka, mistakes).
+
+    Make it correct, make it clear, make it concise, make it fast. In that order.
+    
+    Wes Dyer
+
+1) Design:
+    * eliminate as many features and api verbs as possible
+    * a one-shot prototype is always ideal, but rarely possible: capture as much risk as possible in a minimal prototype, and make some initial runs using the '-race' flags and pprof benchmarks
+2) Lifecycle and management: how will the api be maintained and updated? by whom?
+3) Locking: define your locking strategy. I hate the term 'strategy', too hand-wavy. The real word here is 'requirements'.
+4) Concurrency: define concurrency strategy. Distinguish cpu and io bound behaviors and code appropriately (e.g., using worker pool patterns a la 100 Go Mistakes)
+    * understand how libraries use locking under the hood, and whether or not they require locking or implement it themselves
+5) Testing: define testing strategy in depth.
+    * integration testing: heaviest
+    * unit: code/refactor according to test principles
+    * use test flags: build flags for integration tests, t.Short() to avert others
+    * organizational dedication: if a company does not support test resources, they are fools. Build tests anyway, as they are necessary development artifacts. Every test suite discovers at least one or more requirements or implementation bugs.
+6) Diagnostics: use pprof tools extensively. How one writes ones own code is more or less irrelevant to how it will behave as a complete stack: libraries beneath, system assumptions/behavior without.
