@@ -12,7 +12,7 @@
 
 ## Soapbox
 
-Perhaps the most difficult part of learning Kubernetes and individual CNCF components is learning and configuring the many resources required. You try to dip your foot into one area, and get swept away by the sea! On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
+The difficult part of learning Kubernetes and individual CNCF components is learning and configuring the many resources required. You dip in a toe, and get swept away by the tide of components, languages, and dev tools! On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
 
 This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt.
 The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc, and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
@@ -28,8 +28,12 @@ This repo's goals are pure dev research and training:
 * */clusters*: create folders here containing content (helm charts, k3d startup, etc). describing a cluster
     * */base_cluster*: an example cluster
         * */go_app*: an example golang cloud application with some basic endpoints and a static page
+        * */go_grpc_example*: and example gRPC CRUD application in golang and backed by postgres. A good integration test example using dockertest is included.
+        * */go_webhook_example*: A minimal working example of a kubernetes admission webhook, in golang. The webhook merely logs a message, but could amend the object definitions however one needs.
+        * */tools_container*: A handy container and Pod definition based on the tutum/dnsutils containers, useful for debugging cluster components. Any other one-off diagnostic tools one might need can be added, built, and deployed.
         * */scripts*: script cemetery for random or obsolete scripts
-
+        * */ops_extras*: Not yet fully defined, not a first-class project in the repo. Currently I use this to store declarative examples of role-bindings, etc.
+    * */misc*: an unhealthy collection of review notes and other stuff exposing my own ignorance :)
 The primary resources to understand are in the *base_cluster* folder:
 | Resource | Description |
 | :--- | :--- |
@@ -42,6 +46,8 @@ The primary resources to understand are in the *base_cluster* folder:
 
 ## Pre-reqs
 Install docker, k3d, helm, tilt, kubescape (optional), and istio (if used). See version_info.txt for versions.
+
+Note: I have not done a good job of specifying all reqs to the build container, primarily because I don't want to run docker in the container. As such, some things are intended to be run from a host satisfying those reqs, where noted.
 
 ## Basic Workflow
 
@@ -60,7 +66,7 @@ Note: these steps are performed on the host machine, as I haven't fully containe
     * navigate to `localhost:10350`
     * after a minute or so, hit the go app at `localhost:8080/fortune`
 6) Optional: if kubescape is installed, use it to get a report on the security posture of the cluster.
-I set this up to be run manually because it is easiest to maintain and I am unlikely to keep updated; a fully-fledged CI system would run the scanner as a formal part of the linting process, like any linter or test-success exit conditions. Note that kubescape is not an offline tool; see its docs to make sure you understand its remote interactions and reporting.
+I set this up to be run manually because it is easiest to maintain and I am unlikely to keep updated; a fully-fledged CI system would run the scanner as a formal part of the linting process, like any linter or test-success exit conditions. Note that kubescape is not an offline tool, and shares your info with third party; see its docs to make sure you understand its remote interactions and reporting.
     * navigate to `localhost:10350`
     * click to run the cluster scan; view the results and behold all of the things you have to spend the next week fixing! :P
     * click to run the app scan; this method scans only the go app and its chart, more relevant to the developer than the entire cluster
@@ -75,7 +81,7 @@ I set this up to be run manually because it is easiest to maintain and I am unli
         * curl -L https://istio.io/downloadIstio | sh -
         * cd istio-[version]/
         * export PATH=$PATH:$pwd/bin
-    * Updating: same as installation, just make review and update how the istio manifest is committed; the intent is simply to ensure that the istio version is in the repo, and no other istio artifacts.
+    * Updating: same as installation, just review and update how the istio manifest is committed; the intent is simply to ensure that the istio version is in the repo, and no other istio artifacts.
 
 ## DevOps Resources
 When learning kubernetes I consciously avoided online materials entirely and focused solely on books. Some I found most useful:
@@ -90,10 +96,10 @@ When learning kubernetes I consciously avoided online materials entirely and foc
 
 
 ## Credit
-This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, istio, and kubernetes--and much of google's work as well. 
+This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, istio, and kubernetes, lots of hard work by Google, Mirantis, ArmoSec, Tilt, and others.
 Any copyright/license issues (cloud-native source licenses are prone to 'upgrade') are unintentional, and this repo is for non-commercial use.
-All credit for these technologies goes to their authors, with sincere thanks.  We stand kittens on the shoulders of giants and call ourselves lions, lol. Those who teach instead of tell deserve utmost praise.
+All credit for these technologies goes to their authors, with sincere thanks. We stand kittens on the shoulders of giants and call ourselves lions, lol.
 
-Some very helpful teachers:
+Those who teach instead of tell deserve utmost praise. Some helpful teachers:
 * https://www.youtube.com/c/MarcelDempers
 * https://www.youtube.com/c/DevOpsToolkit

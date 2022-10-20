@@ -192,6 +192,7 @@ Random incomplete thoughts on api development, much of which is universal/langua
 1) Design:
     * eliminate as many features and api verbs as possible
     * a one-shot prototype is always ideal, but rarely possible: capture as much risk as possible in a minimal prototype, and make some initial runs using the '-race' flags and pprof benchmarks
+    * threat modeling: if required, a threat model diagram. Always a good design method anyway, though a budget-conscious one.
 2) Lifecycle and management: how will the api be maintained and updated? by whom?
 3) Locking: define your locking strategy. I hate the term 'strategy', too hand-wavy. The real word here is 'requirements'.
 4) Concurrency: define concurrency strategy. Distinguish cpu and io bound behaviors and code appropriately (e.g., using worker pool patterns a la 100 Go Mistakes)
