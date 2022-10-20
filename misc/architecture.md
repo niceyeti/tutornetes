@@ -88,7 +88,7 @@ Credit: Adam Shostack
 | ELEMENT | APPEARANCE | MEANING | EXAMPLES |
 |---|---|---|---|
 | Process | rounded rectangle (classically circles) | any running code | pods, containers, programs |
-| Data store | labeled pair of horizontal lines | tihngs that store data | sql db, process state (keys, sessions, etc) |
+| Data store | labeled pair of horizontal lines | data at rest: things that store data | sql db, process state (keys, sessions, etc) |
 | Data flow | pointed arrow | communication between processes or stores | connections, read/write ops |
 | External entities | rectangle with sharp corners | people or code outside one's control | third-party services, users, attackers |
 | Trust boundaries | dotted boundaries | Transition between principals or from one trust-level to another (defined w.r.t principals) | userspace app principal, kernel, network boundary diode |
