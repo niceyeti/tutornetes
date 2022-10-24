@@ -44,8 +44,26 @@ func (list *doublyLinkedList) Prepend(newNode *node) {
 	list.count++
 }
 
-// Slice the list at the nth position and return the first node from that position.
-func (list *doublyLinkedList) Slice(n int) (evicted *node) {
+func (list *doublyLinkedList) RotateFront(target *node) {
+	// Node is already at front, simply return
+	if target.prev == nil {
+		return
+	}
+
+	// TODO: revist for simplification. This func is stateful since the list
+	// could be in an invalid state (empty) when called. This error case might
+	// be prevented by refactor. The general case is when called with a node not in list
+	// (perhaps removed previously, or other stateful ops).
+
+	target.prev.next = target.next
+	target.next.prev = target.prev
+	list.count--
+	list.Prepend(target)
+}
+
+// Slice the list at the zero-based nth position and return the first node from that position.
+func (list *doublyLinkedList) TrimRight(n int) (evicted *node) {
+	// NOt at capacity, so just return.
 	if list.count <= n {
 		return
 	}
@@ -53,13 +71,18 @@ func (list *doublyLinkedList) Slice(n int) (evicted *node) {
 	// TODO: reconsider list w/out count variable. I don't like trusting
 	// that I can iterate the list to nth position w/out nil checks.
 	evicted = list.head
-	for i := 1; i < n; i++ {
+	for i := 0; i < n; i++ {
 		evicted = evicted.next
 	}
 
 	list.tail = evicted.prev
 	list.tail.next = nil
 	evicted.prev = nil
+
+	// Check if evicted is the only item in the list.
+	if list.head == evicted {
+		list.head = nil
+	}
 
 	return
 }
@@ -125,7 +148,7 @@ type CacheObject interface {
 // Cache is a least-recently-used cache.
 type Cache struct {
 	// TODO: locking
-	itemMap  map[int]CacheObject
+	itemMap  map[int]*node
 	itemList *doublyLinkedList
 	size     int
 }
@@ -138,7 +161,7 @@ func NewCache(size int) (*Cache, error) {
 	}
 
 	return &Cache{
-		itemMap:  make(map[int]CacheObject, size),
+		itemMap:  make(map[int]*node, size),
 		itemList: newDoublyLinkedList(),
 		size:     size,
 	}, nil
@@ -164,10 +187,10 @@ func (cache *Cache) Add(item CacheObject) (err error) {
 	// Add the item to the front of the list
 	cache.itemList.Prepend(newNode)
 	// Store the item in fast lookup
-	cache.itemMap[item.ID()] = item
+	cache.itemMap[item.ID()] = newNode
 
 	// Evict any nodes over capacity
-	evicted := cache.itemList.Slice(cache.size)
+	evicted := cache.itemList.TrimRight(cache.size)
 	for evicted != nil {
 		// TODO: map size is not reduced after deletion, a memory leak.
 		delete(cache.itemMap, evicted.item.ID())
@@ -180,10 +203,33 @@ func (cache *Cache) Add(item CacheObject) (err error) {
 
 // Get finds the passed item and returns it if it exists.
 // If found, the item is rotated to the front of the cache.
-func (cache *Cache) Get(item CacheObject) {
+func (cache *Cache) Get(id int) (item CacheObject, exists bool) {
+	var target *node
+	target, exists = cache.itemMap[id]
+	if !exists {
+		return
+	}
 
+	// Rotate item to front of list
+	cache.itemList.RotateFront(target)
+	item = target.item
+
+	return
 }
 
-func (cache *Cache) Remove(item CacheObject) {
+var ErrItemNotFound error = errors.New("item id not found")
 
+func (cache *Cache) Remove(id int) error {
+	target, ok := cache.itemMap[id]
+	if !ok {
+		return ErrItemNotFound
+	}
+
+	if err := cache.itemList.Remove(target); err != nil {
+		return err
+	}
+
+	delete(cache.itemMap, target.item.ID())
+
+	return nil
 }
