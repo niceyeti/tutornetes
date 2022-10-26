@@ -1,8 +1,123 @@
+// This is an lru cache implementation for interview practice.
+// Do not use, use hashicorp or another implementation instead.
+
 package lru_cache
 
 import (
 	"errors"
+	"sync"
 )
+
+var (
+	// ErrInvalidCache size is returned if the cache size is not positive.
+	ErrInvalidSize error = errors.New("invalid cache size")
+	// ErrDuplicateItem is returned when attempting to Put a dupe.
+	ErrDuplicateItem error = errors.New("duplicate item")
+	// ErrItemNotFound is returned when an object id is not in the cache.
+	ErrItemNotFound error = errors.New("item id not found")
+)
+
+// CacheObject implements an ID() method for use as a map key.
+type CacheObject interface {
+	// ID() returns an efficient object id for use as a map key.
+	ID() int
+}
+
+// Cache is a least-recently-used cache.
+type Cache struct {
+	// TODO: locking
+	itemMap  map[int]*node
+	itemList *doublyLinkedList
+	capacity int
+	mu       sync.RWMutex
+}
+
+// NewCache initializes a cache of the passed capacity.
+func NewCache(capacity int) (*Cache, error) {
+	if capacity <= 0 {
+		return nil, ErrInvalidSize
+	}
+
+	return &Cache{
+		itemMap:  make(map[int]*node, capacity),
+		itemList: newDoublyLinkedList(),
+		capacity: capacity,
+		mu:       sync.RWMutex{},
+	}, nil
+}
+
+// Put adds the passed item to the cache and evicts old items.
+// Put returns an error if the insertion failed or the object already exists.
+func (cache *Cache) Put(item CacheObject) (err error) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	if _, ok := cache.itemMap[item.ID()]; ok {
+		err = ErrDuplicateItem
+		return
+	}
+
+	newNode := &node{
+		item: item,
+	}
+
+	// TODO: error handling on insertion
+	// TODO: locking
+	// TODO: verify if indices are off by one (e.g. list evicts too many/few nodes)
+
+	// Add the item to the front of the list
+	cache.itemList.Prepend(newNode)
+	// Store the item in hash table
+	cache.itemMap[item.ID()] = newNode
+
+	// Evict least-recently-used nodes over capacity
+	evicted := cache.itemList.TrimRight(cache.capacity)
+	for evicted != nil {
+		// TODO: underlying map size is not reduced after deletion, a memory leak.
+		delete(cache.itemMap, evicted.item.ID())
+		evicted.prev = nil
+		evicted = evicted.next
+	}
+
+	return
+}
+
+// Get finds the passed item and returns it if it exists.
+// If found, the item is rotated to the front of the cache.
+func (cache *Cache) Get(id int) (item CacheObject, exists bool) {
+	cache.mu.RLock()
+	defer cache.mu.RUnlock()
+
+	var target *node
+	target, exists = cache.itemMap[id]
+	if !exists {
+		return
+	}
+
+	// Rotate item to front of list
+	_ = cache.itemList.RotateFront(target)
+	item = target.item
+
+	return
+}
+
+func (cache *Cache) Remove(id int) error {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	target, ok := cache.itemMap[id]
+	if !ok {
+		return ErrItemNotFound
+	}
+
+	if err := cache.itemList.Remove(target); err != nil {
+		return err
+	}
+
+	delete(cache.itemMap, target.item.ID())
+
+	return nil
+}
 
 // TODO: specify type instead of any
 type node struct {
@@ -26,7 +141,7 @@ func newDoublyLinkedList() *doublyLinkedList {
 }
 
 // Prepend inserts the passed node to the front of the list
-// and evicts any items over capacity. The
+// and evicts any items over capacity.
 func (list *doublyLinkedList) Prepend(newNode *node) {
 	// List is empty
 	if list.head == nil {
@@ -37,14 +152,13 @@ func (list *doublyLinkedList) Prepend(newNode *node) {
 		return
 	}
 
-	head := list.head
-	newNode.next = head
-	head.prev = newNode
+	newNode.next = list.head
+	list.head.prev = newNode
 	list.head = newNode
 	list.count++
 }
 
-func (list *doublyLinkedList) RotateFront(target *node) {
+func (list *doublyLinkedList) RotateFront(target *node) (err error) {
 	// Node is already at front, simply return
 	if target.prev == nil {
 		return
@@ -55,10 +169,14 @@ func (list *doublyLinkedList) RotateFront(target *node) {
 	// be prevented by refactor. The general case is when called with a node not in list
 	// (perhaps removed previously, or other stateful ops).
 
-	target.prev.next = target.next
-	target.next.prev = target.prev
+	if err = list.Remove(target); err != nil {
+		return
+	}
+
 	list.count--
 	list.Prepend(target)
+
+	return
 }
 
 // Slice the list at the zero-based nth position and return the first node from that position.
@@ -90,8 +208,8 @@ func (list *doublyLinkedList) TrimRight(n int) (evicted *node) {
 var errItemNil error = errors.New("node cannot be nil")
 
 // Remove removes the passed list node from the list and returns an
-// error if target it nil, otherwise returns nil on success. If successful,
-// no longer use the passed node to allow it to be removed.
+// error if target is nil, otherwise returns nil on success.
+// If successful, no longer use the passed node to allow it to be removed.
 func (list *doublyLinkedList) Remove(target *node) (err error) {
 	defer func() {
 		// If no error, nullify target's pointers to prevent memory leaks via stale references.
@@ -112,124 +230,19 @@ func (list *doublyLinkedList) Remove(target *node) (err error) {
 		list.tail = nil
 		return
 	}
-	// Target is the first item in the list
+	// Target is the first item in a list with successors.
 	if target.prev == nil {
 		list.head = target.next
 		return
 	}
-	// Target is last item in the list
+	// Target is the last item in a list with predecessors.
 	if target.next == nil {
 		list.tail = target.prev
 		return
 	}
-	// Target is in the middle of a list containing multiple items
-	prev := target.prev
-	next := target.next
-	prev.next = next
-	next.prev = prev
+	// Target is in the middle of a list with predecessors and successors.
+	target.prev.next = target.next
+	target.next.prev = target.prev
 
 	return
-}
-
-// CacheKey must be a type that resolves to either int or string.
-// The logic is that the key should resemble a primary key in a database,
-// a C#-style hashcode, or GUID. Constraining to these use-cases enforces
-// strong object-identity patterns.
-type CacheKey interface {
-	~int | ~string
-}
-
-// A CacheObject implements an ID() method for use as a map key.
-type CacheObject interface {
-	// ID() returns an efficient object id for use as a map key.
-	ID() int
-}
-
-// Cache is a least-recently-used cache.
-type Cache struct {
-	// TODO: locking
-	itemMap  map[int]*node
-	itemList *doublyLinkedList
-	size     int
-}
-
-var ErrInvalidSize error = errors.New("invalid cache size")
-
-func NewCache(size int) (*Cache, error) {
-	if size <= 0 {
-		return nil, ErrInvalidSize
-	}
-
-	return &Cache{
-		itemMap:  make(map[int]*node, size),
-		itemList: newDoublyLinkedList(),
-		size:     size,
-	}, nil
-}
-
-var ErrDuplicateItem error = errors.New("duplicate item")
-
-// Add adds the passed item to the cache, returning an error
-// if the insertion failed.
-func (cache *Cache) Add(item CacheObject) (err error) {
-	if _, ok := cache.itemMap[item.ID()]; ok {
-		err = ErrDuplicateItem
-		return
-	}
-
-	newNode := &node{
-		item: item,
-	}
-
-	// TODO: error handling on insertion
-	// TODO: locking
-
-	// Add the item to the front of the list
-	cache.itemList.Prepend(newNode)
-	// Store the item in fast lookup
-	cache.itemMap[item.ID()] = newNode
-
-	// Evict any nodes over capacity
-	evicted := cache.itemList.TrimRight(cache.size)
-	for evicted != nil {
-		// TODO: map size is not reduced after deletion, a memory leak.
-		delete(cache.itemMap, evicted.item.ID())
-		evicted.prev = nil
-		evicted = evicted.next
-	}
-
-	return
-}
-
-// Get finds the passed item and returns it if it exists.
-// If found, the item is rotated to the front of the cache.
-func (cache *Cache) Get(id int) (item CacheObject, exists bool) {
-	var target *node
-	target, exists = cache.itemMap[id]
-	if !exists {
-		return
-	}
-
-	// Rotate item to front of list
-	cache.itemList.RotateFront(target)
-	item = target.item
-
-	return
-}
-
-var ErrItemNotFound error = errors.New("item id not found")
-
-func (cache *Cache) Remove(id int) error {
-	target, ok := cache.itemMap[id]
-	if !ok {
-		return ErrItemNotFound
-	}
-
-	if err := cache.itemList.Remove(target); err != nil {
-		return err
-	}
-
-	delete(cache.itemMap, target.item.ID())
-
-	return nil
 }

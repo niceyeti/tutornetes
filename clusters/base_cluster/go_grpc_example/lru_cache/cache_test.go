@@ -40,7 +40,7 @@ func TestCacheGet(t *testing.T) {
 			item := &foo{
 				id: 123,
 			}
-			err = cache.Add(item)
+			err = cache.Put(item)
 			So(err, ShouldBeNil)
 			found, ok := cache.Get(item.ID())
 			So(ok, ShouldBeTrue)
@@ -50,7 +50,7 @@ func TestCacheGet(t *testing.T) {
 			item2 := &foo{
 				id: 345,
 			}
-			err = cache.Add(item2)
+			err = cache.Put(item2)
 			So(err, ShouldBeNil)
 			found, ok = cache.Get(item2.ID())
 			So(ok, ShouldBeTrue)
@@ -63,7 +63,7 @@ func TestCacheGet(t *testing.T) {
 			item := &foo{
 				id: 123,
 			}
-			err = cache.Add(item)
+			err = cache.Put(item)
 			So(err, ShouldBeNil)
 
 			target, ok := cache.Get(item.ID())
@@ -75,6 +75,33 @@ func TestCacheGet(t *testing.T) {
 
 			_, ok = cache.Get(item.ID())
 			So(ok, ShouldBeFalse)
+		})
+
+		Convey("Given a cache with several items, getting each one rotates it to the front of list", func() {
+			numItems := 10
+			cache, err := NewCache(numItems)
+			So(err, ShouldBeNil)
+
+			// Add a bunch of items to the cache
+			items := []*foo{}
+			for i := 0; i < numItems; i++ {
+				item := &foo{
+					id: i,
+				}
+				items = append(items, item)
+
+				err = cache.Put(item)
+				So(err, ShouldBeNil)
+			}
+
+			for i := 0; i < numItems; i++ {
+				item := items[i]
+				target, ok := cache.Get(item.ID())
+				So(ok, ShouldBeTrue)
+				So(target.ID(), ShouldEqual, item.ID())
+				// The fetched item should now be at front of the list.
+				So(cache.itemList.head.item.ID(), ShouldEqual, item.ID())
+			}
 		})
 	})
 }
@@ -99,7 +126,7 @@ func TestCacheRemove(t *testing.T) {
 			item := &foo{
 				id: 123,
 			}
-			err = cache.Add(item)
+			err = cache.Put(item)
 			So(err, ShouldBeNil)
 
 			err = cache.Remove(item.ID())
@@ -117,7 +144,7 @@ func TestCacheAdd(t *testing.T) {
 		Convey("Given an empty cache, Add succeeds", func() {
 			cache, err := NewCache(10)
 			So(err, ShouldBeNil)
-			err = cache.Add(&foo{
+			err = cache.Put(&foo{
 				id: 123,
 			})
 			So(err, ShouldBeNil)
@@ -129,10 +156,10 @@ func TestCacheAdd(t *testing.T) {
 			item := &foo{
 				id: 123,
 			}
-			err = cache.Add(item)
+			err = cache.Put(item)
 			So(err, ShouldBeNil)
 
-			err = cache.Add(item)
+			err = cache.Put(item)
 			So(err, ShouldEqual, ErrDuplicateItem)
 		})
 		Convey("Given a cache of size one, multiple Add calls succeed with evictions", func() {
@@ -141,20 +168,20 @@ func TestCacheAdd(t *testing.T) {
 			item := &foo{
 				id: 234,
 			}
-			err = cache.Add(item)
+			err = cache.Put(item)
 			So(err, ShouldBeNil)
 
 			item2 := &foo{
 				id: 123,
 			}
 
-			err = cache.Add(item2)
+			err = cache.Put(item2)
 			So(err, ShouldBeNil)
 
 			item3 := &foo{
 				id: 456,
 			}
-			err = cache.Add(item3)
+			err = cache.Put(item3)
 			So(err, ShouldBeNil)
 		})
 	})
