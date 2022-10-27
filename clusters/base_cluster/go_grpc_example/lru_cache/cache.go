@@ -159,21 +159,21 @@ func (list *doublyLinkedList) Prepend(newNode *node) {
 }
 
 func (list *doublyLinkedList) RotateFront(target *node) (err error) {
+	if target == nil {
+		return errItemNil
+	}
+
 	// Node is already at front, simply return
 	if target.prev == nil {
 		return
 	}
 
-	// TODO: revist for simplification. This func is stateful since the list
+	// TODO: revisit for simplification. This func is stateful since the list
 	// could be in an invalid state (empty) when called. This error case might
 	// be prevented by refactor. The general case is when called with a node not in list
 	// (perhaps removed previously, or other stateful ops).
 
-	if err = list.Remove(target); err != nil {
-		return
-	}
-
-	list.count--
+	_ = list.Remove(target)
 	list.Prepend(target)
 
 	return
@@ -181,7 +181,7 @@ func (list *doublyLinkedList) RotateFront(target *node) (err error) {
 
 // Slice the list at the zero-based nth position and return the first node from that position.
 func (list *doublyLinkedList) TrimRight(n int) (evicted *node) {
-	// NOt at capacity, so just return.
+	// Not at capacity, so just return.
 	if list.count <= n {
 		return
 	}
@@ -193,14 +193,28 @@ func (list *doublyLinkedList) TrimRight(n int) (evicted *node) {
 		evicted = evicted.next
 	}
 
+	// Evicted is the first node in the list
+	if evicted == list.head {
+		list.head = nil
+		list.tail = nil
+		list.count = 0
+		return
+	}
+
+	// Evicted is the last item in the list
+	if evicted == list.tail {
+		list.tail.prev.next = nil
+		list.tail = list.tail.prev
+		evicted.prev = nil
+		list.count--
+		return
+	}
+
+	// Else: evicted is some node in the middle
 	list.tail = evicted.prev
 	list.tail.next = nil
 	evicted.prev = nil
-
-	// Check if evicted is the only item in the list.
-	if list.head == evicted {
-		list.head = nil
-	}
+	list.count = n
 
 	return
 }
@@ -211,6 +225,10 @@ var errItemNil error = errors.New("node cannot be nil")
 // error if target is nil, otherwise returns nil on success.
 // If successful, no longer use the passed node to allow it to be removed.
 func (list *doublyLinkedList) Remove(target *node) (err error) {
+	if target == nil {
+		return errItemNil
+	}
+
 	defer func() {
 		// If no error, nullify target's pointers to prevent memory leaks via stale references.
 		if err == nil {
@@ -219,10 +237,6 @@ func (list *doublyLinkedList) Remove(target *node) (err error) {
 			list.count--
 		}
 	}()
-
-	if target == nil {
-		return errItemNil
-	}
 
 	// Target is the only list item
 	if target.prev == nil && target.next == nil {
