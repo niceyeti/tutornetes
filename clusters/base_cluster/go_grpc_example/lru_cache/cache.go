@@ -1,5 +1,9 @@
 // This is an lru cache implementation for interview practice.
-// Do not use, use hashicorp or another implementation instead.
+// Do not use, use hashicorp or another implementation instead;
+// for instance see: https://github.com/golang/groupcache/blob/master/lru/lru.go
+// Caches comes in many different flavors and modifications.
+// TODO/FUTURE: implement a store-backed lru  into which a store
+// (postgres, minio, etc) could be injected.
 
 package lru_cache
 
@@ -19,7 +23,7 @@ var (
 
 // CacheObject implements an ID() method for use as a map key.
 type CacheObject interface {
-	// ID() returns an efficient object id for use as a map key.
+	// ID() returns an int for use as a map key.
 	ID() int
 }
 
@@ -62,7 +66,6 @@ func (cache *Cache) Put(item CacheObject) (err error) {
 	}
 
 	// TODO: error handling on insertion
-	// TODO: locking
 	// TODO: verify if indices are off by one (e.g. list evicts too many/few nodes)
 
 	// Add the item to the front of the list
@@ -119,7 +122,6 @@ func (cache *Cache) Remove(id int) error {
 	return nil
 }
 
-// TODO: specify type instead of any
 type node struct {
 	next *node
 	prev *node
