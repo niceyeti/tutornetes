@@ -50,7 +50,7 @@ Create headless services by setting `ClusterIP: None`. This will create dns A re
 	# create a service on port 80 for deployment 'mydeployment' for container ports 8080
 	kubectl expose deploy/mydeployment --port=80 --container-port=8080
 
-	# serve seure api proxy on port 4242, so you can query it from your local client without auth
+	# serve secure api proxy on port 4242, so you can query it from your local client without auth
 	kubectl proxy --port=4242
 
 	# list all available services' addresses injected at container creation
@@ -120,8 +120,6 @@ Then update the config and poll to detect the change:
 
     kubectl edit configmap nginx-config
 	kubectl exec nginx -c main cat /etc/nginx/conf.d
-
-
 
 ### Secrets
 

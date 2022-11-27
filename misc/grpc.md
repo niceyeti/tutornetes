@@ -29,12 +29,13 @@ Scalability: server is async, client is either async or blocking.
 
 ### RPC Api Types
 
-Unary: 1:1 client/server transactions. This is the most similar to traditional REST request/response apis.
+1) Unary: 1:1 client/server transactions. This is the most similar to traditional REST request/response apis.
 Server streaming: client sends one request and server sends multiple responses.
-    * *Note: the client reads responses until it receives EOF, which ends the communication.*
+* *Note: the client reads responses until it receives EOF, which ends the communication.*
 Client streaming: client sends one or multiple requests, server sends a single response.
-    * *Note: the server receives messages from the client until it receives EOF, and **then** sends its response and closes.
-Bidirectional: both client and server can send and receive multiple requests/responses over the same multiplexed connection. This is basically two go routines, one calling stream.Send() and the other calling stream.Recv() and coordinating shutdown on EOF or errors.
+* *Note: the server receives messages from the client until it receives EOF, and **then** sends its response and closes.*
+
+2) Bidirectional: both client and server can send and receive multiple requests/responses over the same multiplexed connection. This is basically two go routines, one calling stream.Send() and the other calling stream.Recv() and coordinating shutdown on EOF or errors.
 
 NOTE: streams are not just for persistent streams, but also for collection calls, i.e. `ListBlogs(google.proto.empty) returns (stream Blog)`.
 
@@ -62,7 +63,7 @@ Note how the client/server models differ. In server streaming, the client reads 
 
 ### Maintenance and Testing
 
-
+TODO.
 
 ### gRPC Dependencies and Requirements
 

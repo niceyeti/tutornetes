@@ -24,7 +24,7 @@ The twelve factors:
 6) Processes: the app is executed as stateless process(es). No state exists in the app; state is held in stateful backing services (databases). A sneaky counter-example is response caching or maintaining sticky sessions or connections in an app or a user. Design for statelessness and horizontal scalability.
 7) Port binding: the app binds to a specific port as a service. Thus apps can be as services decomposed as resource locations (urls), and managed in a decoupled manner (via k8s Services, load balancers, or more complex service mesh logic for example).
 8) Concurrency: scale out via the Unix process model.
-9) Disposability: apps should respond gracefully to suddent termination and must do the following:
+9) Disposability: apps should respond gracefully to sudden termination and must do the following:
     1) start up quickly
     2) respond quickly to SIGTERM
     3) not be "pets"
@@ -83,6 +83,7 @@ Threat modeling:
 Threat modeling diagrams are not just good for security, they're also great at-a-glance design docs.
 
 ![symbols](./threat_model_symbols.png)
+
 Credit: Adam Shostack
 
 | ELEMENT | APPEARANCE | MEANING | EXAMPLES |
@@ -95,6 +96,7 @@ Credit: Adam Shostack
 
 ### Example Threat Model
 ![example threat model](./example_threat_model.png)
+
 Credit: Adam Shostack
 
 Resources: see Shostack's "Threat Modeling" book for greater detail.

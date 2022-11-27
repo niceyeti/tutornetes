@@ -8,7 +8,7 @@ version 20.10.
     * --rm: remove intermediate build containers
     * --output type=tar,dest=out.tar: save image locally to out.tar file
 * docker diff: view changes to a containers file system
-* docker attach/exec: attach to a runing container or run commands inside
+* docker attach/exec: attach to a running container or run commands inside
 * docker cp ./some_file CONTAINER:/some_file
 * docker cp CONTAINER:/var/logs/app.log - | tar x -O | grep "ERROR"
     * Copies to stdout and pipes to other commands
@@ -48,7 +48,7 @@ Providing brackets indicates the exe will be run directly. The benefit is that S
 2) Data containers: docker supports a VOLUME instruction whereby an image may consist entirely of data. This supports some interesting use-cases, such as machine learning on secured data:
 * Build and distribute datasets as encrypted containers
 * Copy them into Pods using init-containers and sidecars, and Secrets for threat model.
-* Thereby, one could build a set of ML/analysis services with only read-only capabilities on the data, which remains encrypted at rest throughout.
+* Thereby, one could build a set of ML/analysis services with only read-only capabilities on the data, which remains encrypted throughout. In transit, and at rest, though the precise way of stating this model is simply that data would be minimally unencrypted and only within specific contexts.
 
 ## Other
 
