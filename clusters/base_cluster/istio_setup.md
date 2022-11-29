@@ -92,7 +92,7 @@ Istio was previously multiple services, since consolidated into a monolith as `i
 
 ### VirtualService
 
-Recall that K8s Service objects provide a stable network identity for a service via label selector: `app: my_app` and they map ports (a process-level abstraction). A VirtualService is a layer above a Service, providing additional functionality such as routing, retries, or weighting (e.g. 90/10). VirtualService objects map to Service objects or subsets of Service objects via their `host` definition. Logically these operate as userspace proxies, though I don't know this is the case.
+Recall that K8s Service objects provide a stable network identity for a service via a label selector: `app: my_app` and they map ports (a process-level abstraction). A VirtualService is a layer above a Service, providing additional functionality such as routing, retries, or weighting (e.g. 90/10). VirtualService objects map to Service objects or subsets of Service objects via their `host` definition. Logically these operate as userspace proxies, though I don't know this is the case.
 
 The following rules apply:
 * VirtualServices (vs) may mention multiple hosts, but hosts (names) may exist in only one VirtualService.

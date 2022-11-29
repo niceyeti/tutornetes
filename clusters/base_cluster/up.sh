@@ -33,7 +33,23 @@ function bail_if_cluster_exists() {
 
 function check_prereqs() {
     if [[ -z $(which helm) ]]; then 
-        echo "Helm must be installed (for istio, et al), exiting..."
+        echo "Helm must be installed, exiting..."
+        exit
+    fi
+    if [[ -z $(which istioctl) ]]; then 
+        echo "Istio must be installed, exiting..."
+        exit
+    fi
+    if [[ -z $(which docker) ]]; then 
+        echo "Docker must be installed, exiting..."
+        exit
+    fi
+    if [[ -z $(which k3d) ]]; then 
+        echo "K3d must be installed, exiting..."
+        exit
+    fi
+    if [[ -z $(which tilt) ]]; then 
+        echo "Tilt must be installed, exiting..."
         exit
     fi
 }

@@ -12,14 +12,14 @@ Just some random notes, this is a huge subject.
 * clean code contracts for OS and environment portability
 * orthogonal logging
 
-Not all of the factors have aged well. For instance, principle-12 "admin processes" advocates shelling into containers to baby them, which is explicitly discouraged in modern clouds apps. Manual configuration via shells creates snowflakes, pets, and drift. However it is still extremely useful for diagnostic, security, and development tasks.
+Not all of the factors have aged well. For instance, principle-12 "admin processes" advocates shelling into containers to baby them, which is explicitly discouraged in modern cloud apps. Manual configuration via shells creates snowflakes, pets, and drift. However it is still extremely useful for diagnostic, security, and development tasks.
 
 
 The twelve factors:
-1) Code base: there is always a 1:1 correlation between the codebase and the application, with the codebase managed by something like Git.
+1) Code base: there is always a 1:1 correlation between the codebase and the application, with the codebase managed by Git.
 2) Dependencies: the application never depends on system-wide dependencies, and its dependencies are explicitly declared in a manifest. A good example is that Golang apps are all statically compiled and do not dynamically link to system dependencies outside the app.
 3) Config: config is strictly separate from code, using environment variables and config-maps (k8s). Configuration must be able to change independently of code recompilation.
-4) Backing services: these are treated as 'attached resources', that can be redeployed independently of the application. I dislike the vagueness of the term 'attached resource', but I believe the point is that an app should be coded to an interface, not an implementation, and should not require code changes when an external resources fails/is-replaced and so on.
+4) Backing services: these are treated as 'attached resources', that can be redeployed independently of the application. I dislike the vagueness of the term 'attached resource', but I believe the point is that an app should be coded to an interface, not an implementation, and should not require code changes when an external resource fails/is-replaced and so on.
 5) Build, release, run: a build is the process of generating an executable package; a release combines the package with a config (dev, prod, etc), and a run is when the app is actually executed in an environment. These steps are strictly separated.
 6) Processes: the app is executed as stateless process(es). No state exists in the app; state is held in stateful backing services (databases). A sneaky counter-example is response caching or maintaining sticky sessions or connections in an app or a user. Design for statelessness and horizontal scalability.
 7) Port binding: the app binds to a specific port as a service. Thus apps can be as services decomposed as resource locations (urls), and managed in a decoupled manner (via k8s Services, load balancers, or more complex service mesh logic for example).
@@ -38,18 +38,17 @@ The twelve factors:
 11) Orthogonal logging: apps should treat logging as event streams, managing no log files or other special services, and merely logging to stdout. The logging infrastructure should then receive these event streams.
 12) Admin processes: run management and admin processes as one-off processes, e.g. `kubectl exec mypod -- curl -i some-service.mynamespace.service.cluster.local`.
 
-"Cloud Native Go" has a nice writeup on 12 Factor Apps for Golang. As more or less a cloud-native language, the corresponding between Golang and its library features are more or less 1:1 with 12 Factor principles:
+"Cloud Native Go" has a nice writeup on 12 Factor Apps for Golang. As a cloud-native language, there is a direct correspondence between Golang and 12 Factor principles:
 1) code base: this is defined by things like Dockerfiles for dev containers, however the tooling of 'go build' 'go get' and the like is stable enough to meet the code-base requirement that what is built on one machine will be built the same on another.
 2) dependencies: go modules explicitly declare and manage dependencies 
 3) config: tools like Viper provide easy to use env-var interaction.
-4) backing services: golang has many builtin resources for interacting with and communicating directly with common external services: sql/db drivers, serialization, gRPC, etc.
+4) backing services: golang has many builtin resources for interacting with and communicating directly with common external services: sql/db drivers, serialization, http client/server, gRPC, etc.
 5) build, release, run: `go build`, vendoring, and other release management features.
 6/7) Processes and ports: golang is directly amenable to building http/REST and gRPC interfaces quickly.
 8) Concurrency: golang's concurrency model (particular well-crafted contexts and error handling)
 9) Disposability: go's culture enocurages this
 
 Factors 10-12 are infrastructural concerns, not code responsibilities, so go doesn't apply there. But its still probably pretty good :).
-
 
 ## Hexagonal Applications
 
@@ -61,7 +60,15 @@ STRIDE and threat-modeling are a terrific design activity, even if you ignore it
 It deserves its own coverage, but in brief:
 * STRIDE: spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege
 
-Attack trees: similar to a fish-bone causal diagram in terms of displaying causal inputs toward a goal. First,
+### Attack trees
+
+![./attack_trees.png](./attack_trees.png)
+
+Diagram credit: Bruce Schneier, via Dr. Dobbs Journal
+
+Attack trees are similar to a fish-bone causal diagram in terms of displaying causal inputs toward a goal. This provides info about the graphical path of attacks, but can also lend insights about their probability distribution; for instance, high/low risk probability and high/low cost info directly lends to expected-value analyses of attacks, and where best to place one's resources.
+
+First,
 draw a goal ("compromise key") around core protected elements in an architecture. Then draw the next layer of
 adjacent events/acitivites which could lead to that goal being satisfied ("insider threat", "bad crypto", etc).
 Each of these then has a set of its own inputs, and so on, until you reach initial external entities (the leaves of the tree). There are many example trees that describe the layout. Some implement formal definitions, such
@@ -72,7 +79,7 @@ as AND/OR gates over their inputs, and so on.
 What is likable about fish-bone is that it formally specifies that you define the following threats:
 * the 6M's: method, material, manpower, measurement, machines, mother nature, management
 
-Threat modeling:
+### Threat Modeling
 1) define external entities first
 2) identify threats; use STRIDE to define each threat across the entire system.
 3) once found:
@@ -92,7 +99,7 @@ Credit: Adam Shostack
 | Data store | labeled pair of horizontal lines | data at rest: things that store data | sql db, process state (keys, sessions, etc) |
 | Data flow | pointed arrow | communication between processes or stores | connections, read/write ops |
 | External entities | rectangle with sharp corners | people or code outside one's control | third-party services, users, attackers |
-| Trust boundaries | dotted boundaries | Transition between principals or from one trust-level to another (defined w.r.t principals) | userspace app principal, kernel, network boundary diode |
+| Trust boundaries | dotted boundaries | Transition between principals or from one trust-level to another (defined w.r.t. principals) | userspace app principal, kernel, network boundary, diode |
 
 ### Example Threat Model
 ![example threat model](./example_threat_model.png)

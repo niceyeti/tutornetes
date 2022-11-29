@@ -37,7 +37,7 @@ FROM: alpine, scratch, etch.
 
 CMD: without brackets runs command as a child process of the shell:
 ```
-    # /bin/sh -c 'echo $PATH'
+    # Same as: /bin/sh -c 'echo $PATH'
     CMD echo $PATH
 ```
 Providing brackets indicates the exe will be run directly. The benefit is that SIGINT and similar signals will be caught.

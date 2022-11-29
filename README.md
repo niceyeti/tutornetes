@@ -12,7 +12,7 @@
 
 ## Soapbox
 
-The difficult part of learning Kubernetes and individual CNCF components is learning and configuring the many resources required. You dip in a toe, and get swept away by the tide of components, languages, and dev tools! On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
+The difficult part of learning Kubernetes and CNCF components is learning and configuring the many resources required. You dip in a toe pnly to get swept away by the tide of components, languages, and development tools! On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
 
 This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt.
 The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc, and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
@@ -45,9 +45,14 @@ The primary resources to understand are in the *base_cluster* folder:
 | *go_app/src* |  The source code for an extremely simple golang webapp; basically a dockerfile and a few dummy endpoints. |
 
 ## Pre-reqs
-Install docker, k3d, helm, tilt, kubescape (optional), and istio (if used). See version_info.txt for versions.
+The development container provides full golang development support, just open the tutornetes/ folder in vscode and build the dev container.
 
-Note: I have not done a good job of specifying all reqs to the build container, primarily because I don't want to run docker in the container. As such, some things are intended to be run from a host satisfying those reqs, where noted.
+However these components are required on your host (outside the dev container):
+* docker, k3d, helm, tilt, kubescape (optional), and istio (if used). 
+* See version_info.txt for versions.
+
+I have not specified all reqs in the build container, primarily because I don't want to run docker in the dev container.
+As such, some things are intended to be run from a host satisfying those reqs, where noted.
 
 ## Basic Workflow
 
