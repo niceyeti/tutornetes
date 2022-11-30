@@ -24,6 +24,7 @@ NOTE: This api is completely roughed out for a simple app api for the sake of cl
 Some basic info is printed to stdout, which using the default kubes logging will show up in app logs.
 Otherwise nothing here is for quality. Before using, pay attention to the lib docs for http server
 and gorillamux; especially the behavior of Write and WriteHeader:
+
 	"If WriteHeader has not yet been called, Write calls WriteHeader(http.StatusOK) before
 	writing the data. ... yadda yadda ... side effects."
 */
