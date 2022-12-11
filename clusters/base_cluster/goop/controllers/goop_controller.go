@@ -39,6 +39,17 @@ import (
 	goopv1alpha1 "github.com/example/goop/api/v1alpha1"
 )
 
+// TODO (Jesse): revisit finalizer. See other TODO for link to docs.
+const goopFinalizer = "goop.example.com/finalizer"
+
+// Definitions to manage status conditions
+const (
+	// typeAvailableGoop represents the status of the Deployment reconciliation
+	typeAvailableGoop = "Available"
+	// typeDegradedGoop represents the status used when the custom resource is deleted and the finalizer operations are must to occur.
+	typeDegradedGoop = "Degraded"
+)
+
 // GoopReconciler reconciles a Goop object
 type GoopReconciler struct {
 	client.Client
@@ -80,7 +91,7 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Let's just set the status as Unknown when no status are available
 	if memcached.Status.Conditions == nil || len(memcached.Status.Conditions) == 0 {
-		meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableMemcached, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
+		meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableGoop, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err = r.Status().Update(ctx, memcached); err != nil {
 			log.Error(err, "Failed to update Memcached status")
 			return ctrl.Result{}, err
@@ -99,6 +110,7 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Let's add a finalizer. Then, we can define some operations which should
 	// occurs before the custom resource to be deleted.
+	// TODO (Jesse): figure out finalizer
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 	if !controllerutil.ContainsFinalizer(memcached, memcachedFinalizer) {
 		log.Info("Adding Finalizer for Memcached")
