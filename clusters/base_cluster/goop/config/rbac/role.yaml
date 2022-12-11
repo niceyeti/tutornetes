@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - goop.example.com
+  resources:
+  - goops
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - goop.example.com
+  resources:
+  - goops/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - goop.example.com
+  resources:
+  - goops/status
+  verbs:
+  - get
+  - patch
+  - update
