@@ -112,9 +112,9 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// occurs before the custom resource to be deleted.
 	// TODO (Jesse): figure out finalizer
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
-	if !controllerutil.ContainsFinalizer(memcached, memcachedFinalizer) {
+	if !controllerutil.ContainsFinalizer(memcached, goopFinalizer) {
 		log.Info("Adding Finalizer for Memcached")
-		if ok := controllerutil.AddFinalizer(memcached, memcachedFinalizer); !ok {
+		if ok := controllerutil.AddFinalizer(memcached, goopFinalizer); !ok {
 			log.Error(err, "Failed to add finalizer into the custom resource")
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -129,11 +129,11 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// indicated by the deletion timestamp being set.
 	isMemcachedMarkedToBeDeleted := memcached.GetDeletionTimestamp() != nil
 	if isMemcachedMarkedToBeDeleted {
-		if controllerutil.ContainsFinalizer(memcached, memcachedFinalizer) {
+		if controllerutil.ContainsFinalizer(memcached, goopFinalizer) {
 			log.Info("Performing Finalizer Operations for Memcached before delete CR")
 
 			// Let's add here an status "Downgrade" to define that this resource begin its process to be terminated.
-			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeDegradedMemcached,
+			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeDegradedGoop,
 				Status: metav1.ConditionUnknown, Reason: "Finalizing",
 				Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", memcached.Name)})
 
@@ -159,7 +159,7 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				return ctrl.Result{}, err
 			}
 
-			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeDegradedMemcached,
+			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeDegradedGoop,
 				Status: metav1.ConditionTrue, Reason: "Finalizing",
 				Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", memcached.Name)})
 
@@ -169,7 +169,7 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			}
 
 			log.Info("Removing Finalizer for Memcached after successfully perform the operations")
-			if ok := controllerutil.RemoveFinalizer(memcached, memcachedFinalizer); !ok {
+			if ok := controllerutil.RemoveFinalizer(memcached, goopFinalizer); !ok {
 				log.Error(err, "Failed to remove finalizer for Memcached")
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -192,7 +192,7 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			log.Error(err, "Failed to define new Deployment resource for Memcached")
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableMemcached,
+			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableGoop,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
 				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", memcached.Name, err)})
 
@@ -243,7 +243,7 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			}
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableMemcached,
+			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableGoop,
 				Status: metav1.ConditionFalse, Reason: "Resizing",
 				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", memcached.Name, err)})
 
@@ -262,7 +262,7 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// The following implementation will update the status
-	meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableMemcached,
+	meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableGoop,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
 		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", memcached.Name, size)})
 
