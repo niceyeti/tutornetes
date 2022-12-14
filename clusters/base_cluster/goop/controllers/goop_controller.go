@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -158,6 +159,7 @@ func (r *GoopReconciler) Reconcile(
 
 			// Perform all operations required before remove the finalizer and allow
 			// the Kubernetes API to remove the custom resource.
+			// TODO: I need to implement this
 			r.doFinalizerOperationsForGoop(goop)
 
 			// TODO(user): If you add operations to the doFinalizerOperationsForGoop method
@@ -200,19 +202,29 @@ func (r *GoopReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	// Check if the deployment already exists, if not create a new one
-	found := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Name: goop.Name, Namespace: goop.Namespace}, found)
+	// Check if the daemonset already exists, if not create a new one
+	found := &appsv1.DaemonSet{}
+	err = r.Get(
+		ctx,
+		types.NamespacedName{
+			Name:      goop.Name,
+			Namespace: goop.Namespace,
+		},
+		found)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Define a new deployment
-		dep, err := r.deploymentForMemcached(goop)
+		ds, err := r.daemonsetForGoop(goop)
 		if err != nil {
 			log.Error(err, "Failed to define new Deployment resource for Memcached")
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(&goop.Status.Conditions, metav1.Condition{Type: typeAvailableGoop,
-				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", goop.Name, err)})
+			meta.SetStatusCondition(
+				&goop.Status.Conditions,
+				metav1.Condition{
+					Type:    typeAvailableGoop,
+					Status:  metav1.ConditionFalse,
+					Reason:  "Reconciling",
+					Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", goop.Name, err)})
 
 			if err := r.Status().Update(ctx, goop); err != nil {
 				log.Error(err, "Failed to update Memcached status")
@@ -222,20 +234,20 @@ func (r *GoopReconciler) Reconcile(
 			return ctrl.Result{}, err
 		}
 
-		log.Info("Creating a new Deployment",
-			"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-		if err = r.Create(ctx, dep); err != nil {
-			log.Error(err, "Failed to create new Deployment",
-				"Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+		log.Info("Creating a new job Daemonset",
+			"Daemonset.Namespace", ds.Namespace, "Daemonset.Name", ds.Name)
+		if err = r.Create(ctx, ds); err != nil {
+			log.Error(err, "Failed to create new Daemonset",
+				"Daemonset.Namespace", ds.Namespace, "Daemonset.Name", ds.Name)
 			return ctrl.Result{}, err
 		}
 
-		// Deployment created successfully
+		// DS created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	} else if err != nil {
-		log.Error(err, "Failed to get Deployment")
+		log.Error(err, "Failed to get Daemonset")
 		// Let's return the error for the reconciliation be re-trigged again
 		return ctrl.Result{}, err
 	}
@@ -244,6 +256,8 @@ func (r *GoopReconciler) Reconcile(
 	// to set the quantity of Deployment instances is the desired state on the cluster.
 	// Therefore, the following code will ensure the Deployment size is the same as defined
 	// via the Size spec of the Custom Resource which we are reconciling.
+	/*  // TODO: this handled replica size change in the memcache example. I should likewise
+	    // implement Update logic, but will do so after getting the controller to partially work.
 	size := goop.Spec.Size
 	if *found.Spec.Replicas != size {
 		found.Spec.Replicas = &size
@@ -281,6 +295,7 @@ func (r *GoopReconciler) Reconcile(
 		// update. Also, it will help ensure the desired state on the cluster
 		return ctrl.Result{Requeue: true}, nil
 	}
+	*/
 
 	// The following implementation will update the status
 	meta.SetStatusCondition(
@@ -289,10 +304,10 @@ func (r *GoopReconciler) Reconcile(
 			Type:    typeAvailableGoop,
 			Status:  metav1.ConditionTrue,
 			Reason:  "Reconciling",
-			Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", goop.Name, size)})
+			Message: fmt.Sprintf("Daemonset for custom resource (%s) created successfully", goop.Name)})
 
 	if err := r.Status().Update(ctx, goop); err != nil {
-		log.Error(err, "Failed to update Memcached status")
+		log.Error(err, "Failed to update Goop status")
 		return ctrl.Result{}, err
 	}
 
@@ -313,20 +328,65 @@ func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
 	// More info: https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/
 
 	// The following implementation will raise an event
-	r.Recorder.Event(
-		cr,
-		"Warning",
-		"Deleting",
-		fmt.Sprintf("Custom Resource %s is being deleted from the namespace %s",
-			cr.Name,
-			cr.Namespace))
+	// TODO: I need to implement this, but my generated code is missing a Reconciler (?)
+	//r.Recorder.Event(
+	//	cr,
+	//	"Warning",
+	//	"Deleting",
+	//	fmt.Sprintf("Custom Resource %s is being deleted from the namespace %s",
+	//		cr.Name,
+	//		cr.Namespace))
 }
 
-// deploymentForMemcached returns a Memcached Deployment object
-func (r *GoopReconciler) deploymentForMemcached(
-	goop *goopv1alpha1.Goop) (*appsv1.Deployment, error) {
+/*
+	Deploying Jobs to nodes such that a Job runs independently on every node
+	can be done using a Daemonset that runs the job logic in init containers.
+	Its very likely a more modern pattern exists, perhaps using Jobs with topology
+	spread constraints. I have no idea if the daemonset pattern obtains all desired
+	lifecycle requirements for job-like behavior, or if this is a hack.
+	This yaml pattern comes from the github issue reply here: https://github.com/kubernetes/kubernetes/issues/36601
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: auto-pull-images
+  namespace: default
+  labels:
+    k8s-app: auto-pull-images
+spec:
+  selector:
+    matchLabels:
+      name: auto-pull-images
+  template:
+    metadata:
+      labels:
+        name: auto-pull-images
+    spec:
+      initContainers:
+        - name: serverless-template-container
+          image: unfor19/serverless-template
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+      containers:
+        - name: pause
+          image: gcr.io/google_containers/pause
+          resources:
+            limits:
+              cpu: 50m
+              memory: 50Mi
+            requests:
+              cpu: 50m
+              memory: 50Mi
+*/
+
+func (r *GoopReconciler) daemonsetForGoop(
+	goop *goopv1alpha1.Goop) (*appsv1.DaemonSet, error) {
 	ls := labelsForGoop(goop.Name)
-	replicas := goop.Spec.JobCount
 
 	// Get the Operand image
 	image, err := imageForGoop()
@@ -334,13 +394,15 @@ func (r *GoopReconciler) deploymentForMemcached(
 		return nil, err
 	}
 
-	dep := &appsv1.Deployment{
+	dep := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      goop.Name,
 			Namespace: goop.Namespace,
 		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
+		Spec: appsv1.DaemonSetSpec{
+			UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+				Type: appsv1.OnDeleteDaemonSetStrategyType,
+			},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
@@ -349,34 +411,6 @@ func (r *GoopReconciler) deploymentForMemcached(
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
-					// TODO(user): Uncomment the following code to configure the nodeAffinity expression
-					// according to the platforms which are supported by your solution. It is considered
-					// best practice to support multiple architectures. build your manager image using the
-					// makefile target docker-buildx. Also, you can use docker manifest inspect <image>
-					// to check what are the platforms supported.
-					// More info: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
-					//Affinity: &corev1.Affinity{
-					//	NodeAffinity: &corev1.NodeAffinity{
-					//		RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					//			NodeSelectorTerms: []corev1.NodeSelectorTerm{
-					//				{
-					//					MatchExpressions: []corev1.NodeSelectorRequirement{
-					//						{
-					//							Key:      "kubernetes.io/arch",
-					//							Operator: "In",
-					//							Values:   []string{"amd64", "arm64", "ppc64le", "s390x"},
-					//						},
-					//						{
-					//							Key:      "kubernetes.io/os",
-					//							Operator: "In",
-					//							Values:   []string{"linux"},
-					//						},
-					//					},
-					//				},
-					//			},
-					//		},
-					//	},
-					//},
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &[]bool{true}[0],
 						// IMPORTANT: seccomProfile was introduced with Kubernetes 1.19
@@ -386,7 +420,7 @@ func (r *GoopReconciler) deploymentForMemcached(
 							Type: corev1.SeccompProfileTypeRuntimeDefault,
 						},
 					},
-					Containers: []corev1.Container{{
+					InitContainers: []corev1.Container{{
 						Image:           image,
 						Name:            "goop",
 						ImagePullPolicy: corev1.PullIfNotPresent,
@@ -412,12 +446,64 @@ func (r *GoopReconciler) deploymentForMemcached(
 								},
 							},
 						},
-						Ports: []corev1.ContainerPort{{
-							ContainerPort: goop.Spec.ContainerPort,
-							Name:          "goop",
-						}},
-						// TODO: define this command for goop
-						Command: []string{"goop", "-m=64", "-o", "modern", "-v"},
+						Resources: corev1.ResourceRequirements{
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("100m"),
+								"memory": resource.MustParse("100m"),
+							},
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("100m"),
+								"memory": resource.MustParse("100m"),
+							},
+						},
+						// TODO: ports probably not needed
+						Ports: []corev1.ContainerPort{
+							/*{
+								ContainerPort: goop.Spec.ContainerPort,
+								Name:          "goop",
+							}*/
+						},
+						// TODO: define this command for goop: 'goop.Spec.Command' or something
+						Command: []string{"echo \"GOOP!\""},
+					}},
+					Containers: []corev1.Container{{
+						Image:           "gcr.io/google_containers/pause",
+						Name:            "pause",
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Resources: corev1.ResourceRequirements{
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("50m"),
+								"memory": resource.MustParse("50m"),
+							},
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("50m"),
+								"memory": resource.MustParse("50m"),
+							},
+						},
+						// Ensure restrictive context for the container
+						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+						SecurityContext: &corev1.SecurityContext{
+							// WARNING: Ensure that the image used defines an UserID in the Dockerfile
+							// otherwise the Pod will not run and will fail with "container has runAsNonRoot and image has non-numeric user"".
+							// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
+							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the "RunAsNonRoot" and
+							// "RunAsUser" fields empty.
+							RunAsNonRoot: &[]bool{true}[0],
+							// The memcached image does not use a non-zero numeric user as the default user.
+							// Due to RunAsNonRoot field being set to true, we need to force the user in the
+							// container to a non-zero numeric user. We do this using the RunAsUser field.
+							// However, if you are looking to provide solution for K8s vendors like OpenShift
+							// be aware that you cannot run under its restricted-v2 SCC if you set this value.
+							RunAsUser:                &[]int64{1001}[0],
+							AllowPrivilegeEscalation: &[]bool{false}[0],
+							Capabilities: &corev1.Capabilities{
+								Drop: []corev1.Capability{
+									"ALL",
+								},
+							},
+						},
+						// TODO: ports probably not needed
+						//Ports: []corev1.ContainerPort{},
 					}},
 				},
 			},
@@ -440,7 +526,8 @@ func labelsForGoop(name string) map[string]string {
 	if err == nil {
 		imageTag = strings.Split(image, ":")[1]
 	}
-	return map[string]string{"app.kubernetes.io/name": "Goop",
+	return map[string]string{
+		"app.kubernetes.io/name":       "Goop",
 		"app.kubernetes.io/instance":   name,
 		"app.kubernetes.io/version":    imageTag,
 		"app.kubernetes.io/part-of":    "goop-operator",
