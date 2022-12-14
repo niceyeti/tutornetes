@@ -69,113 +69,131 @@ type GoopReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
-func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Returns: see the Result{} definition.
+func (r *GoopReconciler) Reconcile(
+	ctx context.Context,
+	req ctrl.Request,
+) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
 	// Fetch the Goop instance
-	// The purpose is check if the Custom Resource for the Kind Goop
-	// is applied on the cluster if not we return nil to stop the reconciliation
-	memcached := &goopv1alpha1.Goop{}
-	err := r.Get(ctx, req.NamespacedName, memcached)
+	// The purpose is to check if the Custom Resource for the Kind Goop
+	// is applied on the cluster, and if not we return nil to stop the reconciliation
+	goop := &goopv1alpha1.Goop{}
+	err := r.Get(ctx, req.NamespacedName, goop)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// If the custom resource is not found then, it usually means that it was deleted or not created
-			// In this way, we will stop the reconciliation
-			log.Info("memcached resource not found. Ignoring since object must be deleted")
+			// In this way, we will stop the reconciliation.
+			log.Info("goop resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get memcached")
+		log.Error(err, "Failed to get goop")
 		return ctrl.Result{}, err
 	}
 
 	// Let's just set the status as Unknown when no status are available
-	if memcached.Status.Conditions == nil || len(memcached.Status.Conditions) == 0 {
-		meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableGoop, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
-		if err = r.Status().Update(ctx, memcached); err != nil {
+	if goop.Status.Conditions == nil || len(goop.Status.Conditions) == 0 {
+		meta.SetStatusCondition(
+			&goop.Status.Conditions,
+			metav1.Condition{
+				Type:    typeAvailableGoop,
+				Status:  metav1.ConditionUnknown,
+				Reason:  "Reconciling",
+				Message: "Starting reconciliation"})
+		if err = r.Status().Update(ctx, goop); err != nil {
 			log.Error(err, "Failed to update Memcached status")
 			return ctrl.Result{}, err
 		}
 
-		// Let's re-fetch the memcached Custom Resource after update the status
-		// so that we have the latest state of the resource on the cluster and we will avoid
-		// raise the issue "the object has been modified, please apply
-		// your changes to the latest version and try again" which would re-trigger the reconciliation
+		// Re-fetch the goop Custom Resource after update the status so that
+		// we have the latest state of the resource on the cluster and we will avoid
+		// raising "the object has been modified, please apply your changes to the
+		// latest version and try again" which would re-trigger the reconciliation
 		// if we try to update it again in the following operations
-		if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
-			log.Error(err, "Failed to re-fetch memcached")
+		if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
+			log.Error(err, "Failed to re-fetch goop")
 			return ctrl.Result{}, err
 		}
 	}
 
-	// Let's add a finalizer. Then, we can define some operations which should
-	// occurs before the custom resource to be deleted.
-	// TODO (Jesse): figure out finalizer
+	// Adds a finalizer, then we can define some operations that should occur
+	// before the custom resource deletetion.
+	// TODO (Jesse): figure out finalizer reqs
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
-	if !controllerutil.ContainsFinalizer(memcached, goopFinalizer) {
+	if !controllerutil.ContainsFinalizer(goop, goopFinalizer) {
 		log.Info("Adding Finalizer for Memcached")
-		if ok := controllerutil.AddFinalizer(memcached, goopFinalizer); !ok {
+		if ok := controllerutil.AddFinalizer(goop, goopFinalizer); !ok {
 			log.Error(err, "Failed to add finalizer into the custom resource")
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		if err = r.Update(ctx, memcached); err != nil {
+		if err = r.Update(ctx, goop); err != nil {
 			log.Error(err, "Failed to update custom resource to add finalizer")
 			return ctrl.Result{}, err
 		}
 	}
 
-	// Check if the Memcached instance is marked to be deleted, which is
+	// Check if the Goop instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
-	isMemcachedMarkedToBeDeleted := memcached.GetDeletionTimestamp() != nil
-	if isMemcachedMarkedToBeDeleted {
-		if controllerutil.ContainsFinalizer(memcached, goopFinalizer) {
-			log.Info("Performing Finalizer Operations for Memcached before delete CR")
+	isGoopMarkedToBeDeleted := goop.GetDeletionTimestamp() != nil
+	if isGoopMarkedToBeDeleted {
+		if controllerutil.ContainsFinalizer(goop, goopFinalizer) {
+			log.Info("Performing Finalizer Operations for Goop before deleting CR")
 
-			// Let's add here an status "Downgrade" to define that this resource begin its process to be terminated.
-			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeDegradedGoop,
-				Status: metav1.ConditionUnknown, Reason: "Finalizing",
-				Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", memcached.Name)})
+			// Add a status "Downgrade" to define that this resource begins its process to be terminated.
+			meta.SetStatusCondition(
+				&goop.Status.Conditions,
+				metav1.Condition{
+					Type:    typeDegradedGoop,
+					Status:  metav1.ConditionUnknown,
+					Reason:  "Finalizing",
+					Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", goop.Name)})
 
-			if err := r.Status().Update(ctx, memcached); err != nil {
+			if err := r.Status().Update(ctx, goop); err != nil {
 				log.Error(err, "Failed to update Memcached status")
 				return ctrl.Result{}, err
 			}
 
 			// Perform all operations required before remove the finalizer and allow
 			// the Kubernetes API to remove the custom resource.
-			r.doFinalizerOperationsForMemcached(memcached)
+			r.doFinalizerOperationsForGoop(goop)
 
-			// TODO(user): If you add operations to the doFinalizerOperationsForMemcached method
+			// TODO(user): If you add operations to the doFinalizerOperationsForGoop method
 			// then you need to ensure that all worked fine before deleting and updating the Downgrade status
 			// otherwise, you should requeue here.
 
-			// Re-fetch the memcached Custom Resource before update the status
-			// so that we have the latest state of the resource on the cluster and we will avoid
-			// raise the issue "the object has been modified, please apply
-			// your changes to the latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
-				log.Error(err, "Failed to re-fetch memcached")
+			// Re-fetch the goop Custom Resource before updating its status,
+			// such that we have the latest state of the resource on the cluster and avoid
+			// raising "the object has been modified, please apply your changes to the
+			// latest version and try again" which would re-trigger the reconciliation
+			if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
+				log.Error(err, "Failed to re-fetch goop")
 				return ctrl.Result{}, err
 			}
 
-			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeDegradedGoop,
-				Status: metav1.ConditionTrue, Reason: "Finalizing",
-				Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", memcached.Name)})
+			meta.SetStatusCondition(
+				&goop.Status.Conditions,
+				metav1.Condition{
+					Type:    typeDegradedGoop,
+					Status:  metav1.ConditionTrue,
+					Reason:  "Finalizing",
+					Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", goop.Name)})
 
-			if err := r.Status().Update(ctx, memcached); err != nil {
+			if err := r.Status().Update(ctx, goop); err != nil {
 				log.Error(err, "Failed to update Memcached status")
 				return ctrl.Result{}, err
 			}
 
-			log.Info("Removing Finalizer for Memcached after successfully perform the operations")
-			if ok := controllerutil.RemoveFinalizer(memcached, goopFinalizer); !ok {
-				log.Error(err, "Failed to remove finalizer for Memcached")
+			log.Info("Removing Finalizer for Goop after successfully perform the operations")
+			if ok := controllerutil.RemoveFinalizer(goop, goopFinalizer); !ok {
+				log.Error(err, "Failed to remove finalizer for Goop")
 				return ctrl.Result{Requeue: true}, nil
 			}
 
-			if err := r.Update(ctx, memcached); err != nil {
-				log.Error(err, "Failed to remove finalizer for Memcached")
+			if err := r.Update(ctx, goop); err != nil {
+				log.Error(err, "Failed to remove finalizer for Goop")
 				return ctrl.Result{}, err
 			}
 		}
@@ -184,19 +202,19 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Check if the deployment already exists, if not create a new one
 	found := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Name: memcached.Name, Namespace: memcached.Namespace}, found)
+	err = r.Get(ctx, types.NamespacedName{Name: goop.Name, Namespace: goop.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Define a new deployment
-		dep, err := r.deploymentForMemcached(memcached)
+		dep, err := r.deploymentForMemcached(goop)
 		if err != nil {
 			log.Error(err, "Failed to define new Deployment resource for Memcached")
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableGoop,
+			meta.SetStatusCondition(&goop.Status.Conditions, metav1.Condition{Type: typeAvailableGoop,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", memcached.Name, err)})
+				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", goop.Name, err)})
 
-			if err := r.Status().Update(ctx, memcached); err != nil {
+			if err := r.Status().Update(ctx, goop); err != nil {
 				log.Error(err, "Failed to update Memcached status")
 				return ctrl.Result{}, err
 			}
@@ -226,28 +244,30 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// to set the quantity of Deployment instances is the desired state on the cluster.
 	// Therefore, the following code will ensure the Deployment size is the same as defined
 	// via the Size spec of the Custom Resource which we are reconciling.
-	size := memcached.Spec.Size
+	size := goop.Spec.Size
 	if *found.Spec.Replicas != size {
 		found.Spec.Replicas = &size
 		if err = r.Update(ctx, found); err != nil {
 			log.Error(err, "Failed to update Deployment",
 				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
-			// Re-fetch the memcached Custom Resource before update the status
+			// Re-fetch the memcached Custom Resource before updating the status
 			// so that we have the latest state of the resource on the cluster and we will avoid
 			// raise the issue "the object has been modified, please apply
 			// your changes to the latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, memcached); err != nil {
-				log.Error(err, "Failed to re-fetch memcached")
+			if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
+				log.Error(err, "Failed to re-fetch goop")
 				return ctrl.Result{}, err
 			}
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableGoop,
-				Status: metav1.ConditionFalse, Reason: "Resizing",
-				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", memcached.Name, err)})
+			meta.SetStatusCondition(&goop.Status.Conditions, metav1.Condition{
+				Type:    typeAvailableGoop,
+				Status:  metav1.ConditionFalse,
+				Reason:  "Resizing",
+				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", goop.Name, err)})
 
-			if err := r.Status().Update(ctx, memcached); err != nil {
+			if err := r.Status().Update(ctx, goop); err != nil {
 				log.Error(err, "Failed to update Memcached status")
 				return ctrl.Result{}, err
 			}
@@ -255,6 +275,7 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
+		// TODO: evaluate and translate comment. I need to understand the context for requeuing.
 		// Now, that we update the size we want to requeue the reconciliation
 		// so that we can ensure that we have the latest state of the resource before
 		// update. Also, it will help ensure the desired state on the cluster
@@ -262,11 +283,15 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// The following implementation will update the status
-	meta.SetStatusCondition(&memcached.Status.Conditions, metav1.Condition{Type: typeAvailableGoop,
-		Status: metav1.ConditionTrue, Reason: "Reconciling",
-		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", memcached.Name, size)})
+	meta.SetStatusCondition(
+		&goop.Status.Conditions,
+		metav1.Condition{
+			Type:    typeAvailableGoop,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Reconciling",
+			Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", goop.Name, size)})
 
-	if err := r.Status().Update(ctx, memcached); err != nil {
+	if err := r.Status().Update(ctx, goop); err != nil {
 		log.Error(err, "Failed to update Memcached status")
 		return ctrl.Result{}, err
 	}
@@ -274,8 +299,8 @@ func (r *GoopReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{}, nil
 }
 
-// finalizeMemcached will perform the required operations before delete the CR.
-func (r *GoopReconciler) doFinalizerOperationsForMemcached(cr *goopv1alpha1.Goop) {
+// finalizeMemcached performs the required operations before deleting the CR.
+func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
 	// TODO(user): Add the cleanup steps that the operator
 	// needs to do before the CR can be deleted. Examples
 	// of finalizers include performing backups and deleting
@@ -288,7 +313,10 @@ func (r *GoopReconciler) doFinalizerOperationsForMemcached(cr *goopv1alpha1.Goop
 	// More info: https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/
 
 	// The following implementation will raise an event
-	r.Recorder.Event(cr, "Warning", "Deleting",
+	r.Recorder.Event(
+		cr,
+		"Warning",
+		"Deleting",
 		fmt.Sprintf("Custom Resource %s is being deleted from the namespace %s",
 			cr.Name,
 			cr.Namespace))
@@ -296,9 +324,9 @@ func (r *GoopReconciler) doFinalizerOperationsForMemcached(cr *goopv1alpha1.Goop
 
 // deploymentForMemcached returns a Memcached Deployment object
 func (r *GoopReconciler) deploymentForMemcached(
-	memcached *goopv1alpha1.Goop) (*appsv1.Deployment, error) {
-	ls := labelsForGoop(memcached.Name)
-	replicas := memcached.Spec.Size
+	goop *goopv1alpha1.Goop) (*appsv1.Deployment, error) {
+	ls := labelsForGoop(goop.Name)
+	replicas := goop.Spec.JobCount
 
 	// Get the Operand image
 	image, err := imageForGoop()
@@ -308,8 +336,8 @@ func (r *GoopReconciler) deploymentForMemcached(
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      memcached.Name,
-			Namespace: memcached.Namespace,
+			Name:      goop.Name,
+			Namespace: goop.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -360,7 +388,7 @@ func (r *GoopReconciler) deploymentForMemcached(
 					},
 					Containers: []corev1.Container{{
 						Image:           image,
-						Name:            "memcached",
+						Name:            "goop",
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
@@ -385,10 +413,11 @@ func (r *GoopReconciler) deploymentForMemcached(
 							},
 						},
 						Ports: []corev1.ContainerPort{{
-							ContainerPort: memcached.Spec.ContainerPort,
-							Name:          "memcached",
+							ContainerPort: goop.Spec.ContainerPort,
+							Name:          "goop",
 						}},
-						Command: []string{"memcached", "-m=64", "-o", "modern", "-v"},
+						// TODO: define this command for goop
+						Command: []string{"goop", "-m=64", "-o", "modern", "-v"},
 					}},
 				},
 			},
@@ -397,7 +426,7 @@ func (r *GoopReconciler) deploymentForMemcached(
 
 	// Set the ownerRef for the Deployment
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(memcached, dep, r.Scheme); err != nil {
+	if err := ctrl.SetControllerReference(goop, dep, r.Scheme); err != nil {
 		return nil, err
 	}
 	return dep, nil

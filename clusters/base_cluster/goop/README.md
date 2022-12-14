@@ -1,17 +1,45 @@
 # goop
 
-Goop is a simple golang operator, for exercise.
+Goop is a simple golang operator, for exercise, the value of the business logic is basically nil.
 This operator merely simulates the management of a stateful application,
 by deploying a few dummy Job objects when a Goop object is created:
 
 1) Goop object is created
-2) Goop controller observes creation and deploys some Job objects (mere sleep commands in busybox containers)
+2) Goop controller observes creation and deploys Goop.JobCount 'worker' Pods.
+These are merely busybox 'worker' containers to which 'cmd' strings are passed and printed.
 3) Goop controller observes completion of the Jobs and marks the Goop object as "Completed"
 
-This is an extremely simple example of a stateful object.
+This is a simple example of a stateful object, needlessly complicated by operator code
+that could be replaced by k8s primitives instead.
 But it can be easily extended to more complex patterns, such 
 as implementing various forms of Job logic and dependencies,
 such as for node configuration, db migration, or a build system.
+
+## Goal
+
+Recall the actual logic of controllers can be seen as merely automated kubectl'ing.
+The goal is to understand the layers and patterns by which a controller could be abstracted
+to perform arbitrarily complex operations. A useful way to look at the value of controllers
+is that they could be used to implement distributed linux commands; while most Operators chase
+business value, it is important to think about how they could be used for system value, e.g. 
+for recurring system maintainenance tasks, a distributed cmd line.
+
+## Do you need an Operator?
+
+Note: many Job patterns have already been considered and developed in great detail with off-the-shelf patterns.
+The redis work-queue example could be easily adapted to implement distributed
+Jobs, such as web crawlers attached to Nodes with independent network interfaces for better throughput or rate-limit diversification.
+See:
+* https://kubernetes.io/docs/tasks/job/.
+* https://kubernetes.io/docs/concepts/workloads/controllers/job/#job-patterns
+* https://github.com/kubernetes/kubernetes/issues/36601
+
+In most cases, one should develop one's needs using kubectl and native k8s
+objects. Then, where k8s primitives are not supported, change one's requirements/features/use-cases
+until supported, if possible. Based on this composition of commands+objects, only then
+implement an Operator--if it would still even be necessary! Code is vastly more heavyweight
+and less reusable than declarative commands+objects; the goal is always to mercilessly minimize
+or eliminate code wherever a declarative patterns exists.
 
 ## Construction commands
 
