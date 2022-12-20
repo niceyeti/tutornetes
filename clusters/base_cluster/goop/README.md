@@ -1,19 +1,20 @@
 # goop
 
-Goop is a simple golang operator, for exercise, the value of the business logic is basically nil.
+Goop is a simple golang operator, purely for exercise, and the value of the business logic is basically nil.
 This operator merely simulates the management of a stateful application,
 by deploying a few dummy Job objects when a Goop object is created:
-
 1) Goop object is created
 2) Goop controller observes creation and deploys Goop.JobCount 'worker' Pods.
 These are merely busybox 'worker' containers to which 'cmd' strings are passed and printed.
-3) Goop controller observes completion of the Jobs and marks the Goop object as "Completed"
+3) Goop controller observes completion of all the Jobs and marks the Goop object as "Completed"
 
 This is a simple example of a stateful object, needlessly complicated by operator code
 that could be replaced by k8s primitives instead.
 But it can be easily extended to more complex patterns, such 
 as implementing various forms of Job logic and dependencies,
 such as for node configuration, db migration, or a build system.
+Kubernetes has no native distributed-job object for ensuring that node-based jobs are distributed
+across nodes, but a modicum of utility of this operator is that it achieves this using daemonsets.
 
 ## Goal
 
@@ -56,7 +57,11 @@ Reference: a short, similar version is at https://sdk.operatorframework.io/docs/
     - run `go mod tidy` (this can be re-run as new code is generated)
 5) implement the controller: 
     * reference implementation: https://github.com/operator-framework/operator-sdk/blob/latest/testdata/go/v3/memcached-operator/controllers/memcached_controller.go
-
+    * most the code is straightforward copy/paste from available client examples, to simulate
+    kubectl commands. The difficulty are unusual state update loops and error cases, which may
+    be discovered simply by running the controller--however, expect such integration/state issues
+    to occur, and code defensively by using idempotent ops and avoiding unusual or convoluted
+    logic.
 
 # Custom Operator
 This is a custom operator example described here: https://sdk.operatorframework.io/docs/building-operators/golang/quickstart/
@@ -73,7 +78,8 @@ There are a few order of operations requirements and gotchas with environmental 
         * NOTE: 127.0.0.1:5000 in this command is currently how one reaches the image repo running in the base_cluster
 
 ## Details
-Operator-SDK merely uses kubebuilder under the hood. Despite being a bit overwhelming at first glance in terms
+
+Operator-SDK merely uses kubebuilder under the hood. Despite being a bit overwhelming at first glance, in terms
 of scripts and code-generation workflows (which seem to change constantly), Operator-SDK projects are actually
 somewhat easy to understand. Kubebuilder provides a more internal view of Operators and their programming requirements.
 
@@ -86,10 +92,7 @@ Apis, Groups, and Versioning are core technical concepts:
 * https://book.kubebuilder.io/cronjob-tutorial/gvks.html
 Kubebuilder is a great programmer resource for the internal guts of Operators.
 * https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html
-
-
-
-
+* a high quality hand-holding expedition: https://pres.metamagical.dev/kubecon-eu-2019.pdf
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use
