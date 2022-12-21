@@ -20,8 +20,12 @@ across nodes, but a modicum of utility of this operator is that it achieves this
 The following commands run the controller in the cluster, but there are missing resources/roles:
 - make deploy        # make manifest
 - make docker-build  # make the controller image and push it
-- make docker-push
+- make docker-push   # make sure the image is available in the cluster
+- make deploy # TODO: not sure the order or deploy vs install; check the makefile
+- push any other docker images (busybox, pause, etc.)
 - make install       # installs CRDs and runs the controller
+- kubectl create -f temp/role.yaml
+- kubectl create -f temp/test_goop.yaml
 
 The issue is that the controller is currently:
 1) missing cluster roles for daemonsets. I added a role to temp/role.yaml but this should be
@@ -36,6 +40,7 @@ I think this may have to do with kustomize?
 - I had to create clusterroles to allow the controller to query and create daemonsets: see temp/role.yaml
     * do not namespace clusterroles, nor clusterrolebindings
     * daemonset api group is 'apps'
+
 
 
 
