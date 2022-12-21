@@ -16,6 +16,29 @@ such as for node configuration, db migration, or a build system.
 Kubernetes has no native distributed-job object for ensuring that node-based jobs are distributed
 across nodes, but a modicum of utility of this operator is that it achieves this using daemonsets.
 
+## Current State (delete when controller complete)
+The following commands run the controller in the cluster, but there are missing resources/roles:
+- make deploy        # make manifest
+- make docker-build  # make the controller image and push it
+- make docker-push
+- make install       # installs CRDs and runs the controller
+
+The issue is that the controller is currently:
+1) missing cluster roles for daemonsets. I added a role to temp/role.yaml but this should be
+integrated into the native manifest generation somehow.
+2) the deployment has the image as "controller:latest" but needs registry prefix for my cluster: "k3d-devregistry:5000/controller:latest"
+    * FIX: in config/manager/manager.yaml, simply add the required prefix to the image field.
+Both of these should be resolved such that no manual steps are required to run the controller.
+I think this may have to do with kustomize?
+
+## Dev notes
+- I had to modify the image name in config/manager/manager.yaml to have the k3d-devregistry:5000 image prefix
+- I had to create clusterroles to allow the controller to query and create daemonsets: see temp/role.yaml
+    * do not namespace clusterroles, nor clusterrolebindings
+    * daemonset api group is 'apps'
+
+
+
 ## Goal
 
 Recall the actual logic of controllers can be seen as merely automated kubectl'ing.

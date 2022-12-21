@@ -202,7 +202,11 @@ func (r *GoopReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	// Check if the daemonset already exists, if not create a new one
+	// Check if the daemonset already exists, if not create a new one.
+	// NOTE: querying things like daemonsets requires RBAC permission by the
+	// service-account to do so. Failing to do so gives errors such as:
+	/// 'system:serviceaccount:goop-system:goop-controller-manager" cannot list resource "daemonsets" in API group "apps".
+	// The solution is simply to add the appropriate permissions via roles and rolebindings.
 	found := &appsv1.DaemonSet{}
 	err = r.Get(
 		ctx,
@@ -215,7 +219,7 @@ func (r *GoopReconciler) Reconcile(
 		// Define a new deployment
 		ds, err := r.daemonsetForGoop(goop)
 		if err != nil {
-			log.Error(err, "Failed to define new Deployment resource for Memcached")
+			log.Error(err, "Failed to define new Daemonset resource for Goop")
 
 			// The following implementation will update the status
 			meta.SetStatusCondition(
@@ -521,9 +525,9 @@ func (r *GoopReconciler) daemonsetForGoop(
 // labelsForGoop returns the labels for selecting the resources
 // More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 func labelsForGoop(name string) map[string]string {
-	var imageTag string
+	imageTag := ""
 	image, err := imageForGoop()
-	if err == nil {
+	if err == nil && len(strings.Split(image, ":")) > 1 {
 		imageTag = strings.Split(image, ":")[1]
 	}
 	return map[string]string{

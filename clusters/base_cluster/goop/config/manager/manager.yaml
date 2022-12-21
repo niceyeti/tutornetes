@@ -70,7 +70,10 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: controller:latest
+        env:
+          - name: GOOP_IMAGE
+            value: busybox
+        image: k3d-devregistry:5000/controller:latest
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
