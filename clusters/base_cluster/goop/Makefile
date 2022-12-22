@@ -164,6 +164,13 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 	echo "[Jesse] Installing required add-on roles/bindings"
 	kubectl apply -f ./config/rbac/goop_ds_manager_role.yaml
+	echo "[Jesse] pulling and pushing required images to cluster (these do not need to be uninstalled)"
+	docker pull gcr.io/google_containers/pause
+	docker tag gcr.io/google_containers/pause 127.0.0.1:5000/gcr.io/google_containers/pause
+	docker push 127.0.0.1:5000/gcr.io/google_containers/pause
+	docker pull busybox
+	docker tag busybox 127.0.0.1:5000/busybox
+	docker push 127.0.0.1:5000/busybox
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.

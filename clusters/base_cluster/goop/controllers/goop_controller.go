@@ -453,29 +453,29 @@ func (r *GoopReconciler) daemonsetForGoop(
 						},
 						Resources: corev1.ResourceRequirements{
 							Limits: corev1.ResourceList{
-								"cpu":    resource.MustParse("100Mi"),
-								"memory": resource.MustParse("100Mi"),
+								"cpu":    resource.MustParse("100m"),
+								"memory": resource.MustParse("128Mi"),
 							},
 							Requests: corev1.ResourceList{
-								"cpu":    resource.MustParse("100Mi"),
-								"memory": resource.MustParse("100Mi"),
+								"cpu":    resource.MustParse("10m"),
+								"memory": resource.MustParse("64Mi"),
 							},
 						},
 						// TODO: define this command for goop: 'goop.Spec.Command' or something
-						Command: []string{"/bin/echo \"GOOP!\""},
+						Command: []string{"sleep", "11"},
 					}},
 					Containers: []corev1.Container{{
-						Image:           "gcr.io/google_containers/pause",
+						Image:           "k3d-devregistry:5000/gcr.io/google_containers/pause:latest",
 						Name:            "pause",
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Resources: corev1.ResourceRequirements{
 							Limits: corev1.ResourceList{
-								"cpu":    resource.MustParse("50Mi"),
-								"memory": resource.MustParse("50Mi"),
+								"cpu":    resource.MustParse("50m"),
+								"memory": resource.MustParse("128Mi"),
 							},
 							Requests: corev1.ResourceList{
-								"cpu":    resource.MustParse("50Mi"),
-								"memory": resource.MustParse("50Mi"),
+								"cpu":    resource.MustParse("10m"),
+								"memory": resource.MustParse("64Mi"),
 							},
 						},
 						// Ensure restrictive context for the container
@@ -519,8 +519,11 @@ func (r *GoopReconciler) daemonsetForGoop(
 func labelsForGoop(name string) map[string]string {
 	imageTag := ""
 	image, err := imageForGoop()
-	if err == nil && len(strings.Split(image, ":")) > 1 {
-		imageTag = strings.Split(image, ":")[1]
+	// TODO: this is not a valid way to parse the image tag for image names prefixed by a registry
+	// address and no image tag: k3d-devregistry:5000/busybox -> "5000/busybox".
+	tokens := strings.Split(image, ":")
+	if err == nil && len(tokens) > 1 {
+		imageTag = tokens[len(tokens)-1]
 	}
 	return map[string]string{
 		"app.kubernetes.io/name":       "Goop",
