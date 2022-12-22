@@ -120,11 +120,11 @@ func (r *GoopReconciler) Reconcile(
 	}
 
 	// Adds a finalizer, then we can define some operations that should occur
-	// before the custom resource deletetion.
+	// before the custom resource deletion.
 	// TODO (Jesse): figure out finalizer reqs
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 	if !controllerutil.ContainsFinalizer(goop, goopFinalizer) {
-		log.Info("Adding Finalizer for Memcached")
+		log.Info("Adding Finalizer for Goop")
 		if ok := controllerutil.AddFinalizer(goop, goopFinalizer); !ok {
 			log.Error(err, "Failed to add finalizer into the custom resource")
 			return ctrl.Result{Requeue: true}, nil
@@ -389,7 +389,8 @@ spec:
 */
 
 func (r *GoopReconciler) daemonsetForGoop(
-	goop *goopv1alpha1.Goop) (*appsv1.DaemonSet, error) {
+	goop *goopv1alpha1.Goop,
+) (*appsv1.DaemonSet, error) {
 	ls := labelsForGoop(goop.Name)
 
 	// Get the Operand image
@@ -426,7 +427,7 @@ func (r *GoopReconciler) daemonsetForGoop(
 					},
 					InitContainers: []corev1.Container{{
 						Image:           image,
-						Name:            "goop",
+						Name:            "goop-job", // Note: name can only be alphanumeric and '-'
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
@@ -452,23 +453,16 @@ func (r *GoopReconciler) daemonsetForGoop(
 						},
 						Resources: corev1.ResourceRequirements{
 							Limits: corev1.ResourceList{
-								"cpu":    resource.MustParse("100m"),
-								"memory": resource.MustParse("100m"),
+								"cpu":    resource.MustParse("100Mi"),
+								"memory": resource.MustParse("100Mi"),
 							},
 							Requests: corev1.ResourceList{
-								"cpu":    resource.MustParse("100m"),
-								"memory": resource.MustParse("100m"),
+								"cpu":    resource.MustParse("100Mi"),
+								"memory": resource.MustParse("100Mi"),
 							},
 						},
-						// TODO: ports probably not needed
-						Ports: []corev1.ContainerPort{
-							/*{
-								ContainerPort: goop.Spec.ContainerPort,
-								Name:          "goop",
-							}*/
-						},
 						// TODO: define this command for goop: 'goop.Spec.Command' or something
-						Command: []string{"echo \"GOOP!\""},
+						Command: []string{"/bin/echo \"GOOP!\""},
 					}},
 					Containers: []corev1.Container{{
 						Image:           "gcr.io/google_containers/pause",
@@ -476,12 +470,12 @@ func (r *GoopReconciler) daemonsetForGoop(
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Resources: corev1.ResourceRequirements{
 							Limits: corev1.ResourceList{
-								"cpu":    resource.MustParse("50m"),
-								"memory": resource.MustParse("50m"),
+								"cpu":    resource.MustParse("50Mi"),
+								"memory": resource.MustParse("50Mi"),
 							},
 							Requests: corev1.ResourceList{
-								"cpu":    resource.MustParse("50m"),
-								"memory": resource.MustParse("50m"),
+								"cpu":    resource.MustParse("50Mi"),
+								"memory": resource.MustParse("50Mi"),
 							},
 						},
 						// Ensure restrictive context for the container
@@ -506,8 +500,6 @@ func (r *GoopReconciler) daemonsetForGoop(
 								},
 							},
 						},
-						// TODO: ports probably not needed
-						//Ports: []corev1.ContainerPort{},
 					}},
 				},
 			},

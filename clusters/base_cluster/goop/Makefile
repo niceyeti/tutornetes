@@ -154,21 +154,33 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
+.PHONY: roles
+roles:
+	echo "Creating controller roles"
+
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+	echo "make install: Installing CRDs"
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	echo "[Jesse] Installing required add-on roles/bindings"
+	kubectl apply -f ./config/rbac/goop_ds_manager_role.yaml
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	echo "make uninstall: Uninstalling CRDs"
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	echo "[Jesse] Uninstalling required add-on roles/bindings"
+	kubectl delete -f ./config/rbac/goop_ds_manager_role.yaml
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	echo "make deploy: Deploying controller"
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	echo "make undeploy: Undeploying controller"
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
