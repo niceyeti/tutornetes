@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -93,9 +94,11 @@ func (r *GoopReconciler) Reconcile(
 		log.Error(err, "Failed to get goop")
 		return ctrl.Result{}, err
 	}
+	obj, _ := json.MarshalIndent(goop, "", " ")
+	log.Info("\nGoop:\n>>>" + string(obj) + "<<<\n")
 
-	// Let's just set the status as Unknown when no status are available
-	if goop.Status.Conditions == nil || len(goop.Status.Conditions) == 0 {
+	// Set the status as Unknown when no status are available
+	if len(goop.Status.Conditions) == 0 {
 		meta.SetStatusCondition(
 			&goop.Status.Conditions,
 			metav1.Condition{
@@ -104,11 +107,11 @@ func (r *GoopReconciler) Reconcile(
 				Reason:  "Reconciling",
 				Message: "Starting reconciliation"})
 		if err = r.Status().Update(ctx, goop); err != nil {
-			log.Error(err, "Failed to update Memcached status")
+			log.Error(err, "Failed to update goop status")
 			return ctrl.Result{}, err
 		}
 
-		// Re-fetch the goop Custom Resource after update the status so that
+		// Re-fetch the goop Custom Resource after updating the status so that
 		// we have the latest state of the resource on the cluster and we will avoid
 		// raising "the object has been modified, please apply your changes to the
 		// latest version and try again" which would re-trigger the reconciliation
@@ -124,7 +127,7 @@ func (r *GoopReconciler) Reconcile(
 	// TODO (Jesse): figure out finalizer reqs
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 	if !controllerutil.ContainsFinalizer(goop, goopFinalizer) {
-		log.Info("Adding Finalizer for Goop")
+		log.Info("Adding Finalizer for goop")
 		if ok := controllerutil.AddFinalizer(goop, goopFinalizer); !ok {
 			log.Error(err, "Failed to add finalizer into the custom resource")
 			return ctrl.Result{Requeue: true}, nil
@@ -134,6 +137,16 @@ func (r *GoopReconciler) Reconcile(
 			log.Error(err, "Failed to update custom resource to add finalizer")
 			return ctrl.Result{}, err
 		}
+
+		// Re-fetch the goop Custom Resource after updating the status so that
+		// we have the latest state of the resource on the cluster and we will avoid
+		// raising "the object has been modified, please apply your changes to the
+		// latest version and try again" which would re-trigger the reconciliation
+		// if we try to update it again in the following operations
+		if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
+			log.Error(err, "Failed to re-fetch goop")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Check if the Goop instance is marked to be deleted, which is
@@ -141,7 +154,7 @@ func (r *GoopReconciler) Reconcile(
 	isGoopMarkedToBeDeleted := goop.GetDeletionTimestamp() != nil
 	if isGoopMarkedToBeDeleted {
 		if controllerutil.ContainsFinalizer(goop, goopFinalizer) {
-			log.Info("Performing Finalizer Operations for Goop before deleting CR")
+			log.Info("Performing Finalizer Operations for goop before deleting")
 
 			// Add a status "Downgrade" to define that this resource begins its process to be terminated.
 			meta.SetStatusCondition(
@@ -188,14 +201,14 @@ func (r *GoopReconciler) Reconcile(
 				return ctrl.Result{}, err
 			}
 
-			log.Info("Removing Finalizer for Goop after successfully perform the operations")
+			log.Info("Removing Finalizer for goop after successfully perform the operations")
 			if ok := controllerutil.RemoveFinalizer(goop, goopFinalizer); !ok {
 				log.Error(err, "Failed to remove finalizer for Goop")
 				return ctrl.Result{Requeue: true}, nil
 			}
 
 			if err := r.Update(ctx, goop); err != nil {
-				log.Error(err, "Failed to remove finalizer for Goop")
+				log.Error(err, "Failed to remove finalizer for goop")
 				return ctrl.Result{}, err
 			}
 		}
@@ -228,10 +241,10 @@ func (r *GoopReconciler) Reconcile(
 					Type:    typeAvailableGoop,
 					Status:  metav1.ConditionFalse,
 					Reason:  "Reconciling",
-					Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", goop.Name, err)})
+					Message: fmt.Sprintf("Failed to create Daemonset for the custom resource (%s): (%s)", goop.Name, err)})
 
 			if err := r.Status().Update(ctx, goop); err != nil {
-				log.Error(err, "Failed to update Memcached status")
+				log.Error(err, "Failed to update goop status")
 				return ctrl.Result{}, err
 			}
 
@@ -256,50 +269,9 @@ func (r *GoopReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	// The CRD API is defining that the Memcached type, have a MemcachedSpec.Size field
-	// to set the quantity of Deployment instances is the desired state on the cluster.
-	// Therefore, the following code will ensure the Deployment size is the same as defined
-	// via the Size spec of the Custom Resource which we are reconciling.
-	/*  // TODO: this handled replica size change in the memcache example. I should likewise
-	    // implement Update logic, but will do so after getting the controller to partially work.
-	size := goop.Spec.Size
-	if *found.Spec.Replicas != size {
-		found.Spec.Replicas = &size
-		if err = r.Update(ctx, found); err != nil {
-			log.Error(err, "Failed to update Deployment",
-				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
-
-			// Re-fetch the memcached Custom Resource before updating the status
-			// so that we have the latest state of the resource on the cluster and we will avoid
-			// raise the issue "the object has been modified, please apply
-			// your changes to the latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
-				log.Error(err, "Failed to re-fetch goop")
-				return ctrl.Result{}, err
-			}
-
-			// The following implementation will update the status
-			meta.SetStatusCondition(&goop.Status.Conditions, metav1.Condition{
-				Type:    typeAvailableGoop,
-				Status:  metav1.ConditionFalse,
-				Reason:  "Resizing",
-				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", goop.Name, err)})
-
-			if err := r.Status().Update(ctx, goop); err != nil {
-				log.Error(err, "Failed to update Memcached status")
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{}, err
-		}
-
-		// TODO: evaluate and translate comment. I need to understand the context for requeuing.
-		// Now, that we update the size we want to requeue the reconciliation
-		// so that we can ensure that we have the latest state of the resource before
-		// update. Also, it will help ensure the desired state on the cluster
-		return ctrl.Result{Requeue: true}, nil
-	}
-	*/
+	// TODO: [Jesse] The Goop operator currently has no update logic, primarily
+	// because its features are not complete (for demo purposes). Otherwise this
+	// would need to be done here by diffing goop.Spec and found.Spec.
 
 	// The following implementation will update the status
 	meta.SetStatusCondition(
@@ -342,52 +314,13 @@ func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
 	//		cr.Namespace))
 }
 
-/*
-	Deploying Jobs to nodes such that a Job runs independently on every node
-	can be done using a Daemonset that runs the job logic in init containers.
-	Its very likely a more modern pattern exists, perhaps using Jobs with topology
-	spread constraints. I have no idea if the daemonset pattern obtains all desired
-	lifecycle requirements for job-like behavior, or if this is a hack.
-	This yaml pattern comes from the github issue reply here: https://github.com/kubernetes/kubernetes/issues/36601
-
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: auto-pull-images
-  namespace: default
-  labels:
-    k8s-app: auto-pull-images
-spec:
-  selector:
-    matchLabels:
-      name: auto-pull-images
-  template:
-    metadata:
-      labels:
-        name: auto-pull-images
-    spec:
-      initContainers:
-        - name: serverless-template-container
-          image: unfor19/serverless-template
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 100m
-              memory: 100Mi
-      containers:
-        - name: pause
-          image: gcr.io/google_containers/pause
-          resources:
-            limits:
-              cpu: 50m
-              memory: 50Mi
-            requests:
-              cpu: 50m
-              memory: 50Mi
-*/
-
+// Returns the daemonset that implements jobs using init-containers.
+// Deploying Jobs to nodes such that a Job runs independently on every node
+// can be done using a Daemonset that runs the job logic in init containers.
+// Its very likely a more modern pattern exists, perhaps using Jobs with topology
+// spread constraints. I have no idea if the daemonset pattern obtains all desired
+// lifecycle requirements for job-like behavior, or if this is a hack.
+// This yaml pattern comes from the github issue reply here: https://github.com/kubernetes/kubernetes/issues/36601
 func (r *GoopReconciler) daemonsetForGoop(
 	goop *goopv1alpha1.Goop,
 ) (*appsv1.DaemonSet, error) {
@@ -438,7 +371,6 @@ func (r *GoopReconciler) daemonsetForGoop(
 							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the "RunAsNonRoot" and
 							// "RunAsUser" fields empty.
 							RunAsNonRoot: &[]bool{true}[0],
-							// The memcached image does not use a non-zero numeric user as the default user.
 							// Due to RunAsNonRoot field being set to true, we need to force the user in the
 							// container to a non-zero numeric user. We do this using the RunAsUser field.
 							// However, if you are looking to provide solution for K8s vendors like OpenShift
@@ -478,6 +410,9 @@ func (r *GoopReconciler) daemonsetForGoop(
 								"memory": resource.MustParse("64Mi"),
 							},
 						},
+						// TODO: [Jesse] None of these requirements are fully fleshed-out for a full-fledged
+						// distributed-job CRD, which would depend completely on its features: node access?
+						// root access? et cetera.
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 						SecurityContext: &corev1.SecurityContext{
@@ -487,7 +422,7 @@ func (r *GoopReconciler) daemonsetForGoop(
 							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the "RunAsNonRoot" and
 							// "RunAsUser" fields empty.
 							RunAsNonRoot: &[]bool{true}[0],
-							// The memcached image does not use a non-zero numeric user as the default user.
+							// The memcached image did not use a non-zero numeric user as the default user.
 							// Due to RunAsNonRoot field being set to true, we need to force the user in the
 							// container to a non-zero numeric user. We do this using the RunAsUser field.
 							// However, if you are looking to provide solution for K8s vendors like OpenShift
@@ -506,11 +441,12 @@ func (r *GoopReconciler) daemonsetForGoop(
 		},
 	}
 
-	// Set the ownerRef for the Deployment
+	// Set the ownerRef for the Daemonset
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
 	if err := ctrl.SetControllerReference(goop, dep, r.Scheme); err != nil {
 		return nil, err
 	}
+
 	return dep, nil
 }
 
