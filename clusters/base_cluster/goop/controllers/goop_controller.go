@@ -58,16 +58,14 @@ type GoopReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// TODO: [Jesse] replace manually-created daemonset RBACs with this workflow.
+// See 'RBAC markers': https://book.kubebuilder.io/cronjob-tutorial/controller-overview.html
 //+kubebuilder:rbac:groups=goop.example.com,resources=goops,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=goop.example.com,resources=goops/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=goop.example.com,resources=goops/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Goop object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
@@ -94,6 +92,7 @@ func (r *GoopReconciler) Reconcile(
 		log.Error(err, "Failed to get goop")
 		return ctrl.Result{}, err
 	}
+
 	obj, _ := json.MarshalIndent(goop, "", " ")
 	log.Info("\nGoop:\n>>>" + string(obj) + "<<<\n")
 
@@ -142,7 +141,7 @@ func (r *GoopReconciler) Reconcile(
 		// we have the latest state of the resource on the cluster and we will avoid
 		// raising "the object has been modified, please apply your changes to the
 		// latest version and try again" which would re-trigger the reconciliation
-		// if we try to update it again in the following operations
+		// if we try to update it again in the following operations.
 		if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
 			log.Error(err, "Failed to re-fetch goop")
 			return ctrl.Result{}, err
@@ -233,8 +232,6 @@ func (r *GoopReconciler) Reconcile(
 		ds, err := r.daemonsetForGoop(goop)
 		if err != nil {
 			log.Error(err, "Failed to define new Daemonset resource for Goop")
-
-			// The following implementation will update the status
 			meta.SetStatusCondition(
 				&goop.Status.Conditions,
 				metav1.Condition{
@@ -290,7 +287,6 @@ func (r *GoopReconciler) Reconcile(
 	return ctrl.Result{}, nil
 }
 
-// finalizeMemcached performs the required operations before deleting the CR.
 func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
 	// TODO(user): Add the cleanup steps that the operator
 	// needs to do before the CR can be deleted. Examples
@@ -298,20 +294,10 @@ func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
 	// resources that are not owned by this CR, like a PVC.
 
 	// Note: It is not recommended to use finalizers with the purpose of delete resources which are
-	// created and managed in the reconciliation. These ones, such as the Deployment created on this reconcile,
+	// created and managed in the reconciliation. These ones, such as the Daemonset created on this reconcile,
 	// are defined as depended of the custom resource. See that we use the method ctrl.SetControllerReference.
 	// to set the ownerRef which means that the Deployment will be deleted by the Kubernetes API.
 	// More info: https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/
-
-	// The following implementation will raise an event
-	// TODO: I need to implement this, but my generated code is missing a Reconciler (?)
-	//r.Recorder.Event(
-	//	cr,
-	//	"Warning",
-	//	"Deleting",
-	//	fmt.Sprintf("Custom Resource %s is being deleted from the namespace %s",
-	//		cr.Name,
-	//		cr.Namespace))
 }
 
 // Returns the daemonset that implements jobs using init-containers.

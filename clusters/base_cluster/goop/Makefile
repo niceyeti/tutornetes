@@ -163,6 +163,7 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 	echo "make install: Installing CRDs"
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 	echo "[Jesse] Installing required add-on roles/bindings"
+	echo "TODO: the goop_ds_manager role can probably be replaced by kubebuilder 'RBAC markers'."
 	kubectl apply -f ./config/rbac/goop_ds_manager_role.yaml
 	echo "[Jesse] pulling and pushing required images to cluster (these do not need to be uninstalled)"
 	docker pull gcr.io/google_containers/pause
