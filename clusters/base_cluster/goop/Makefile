@@ -162,9 +162,6 @@ roles:
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	echo "make install: Installing CRDs"
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
-	echo "[Jesse] Installing required add-on roles/bindings"
-	echo "TODO: the goop_ds_manager role can probably be replaced by kubebuilder 'RBAC markers'."
-	kubectl apply -f ./config/rbac/goop_ds_manager_role.yaml
 	echo "[Jesse] pulling and pushing required images to cluster (these do not need to be uninstalled)"
 	docker pull gcr.io/google_containers/pause
 	docker tag gcr.io/google_containers/pause 127.0.0.1:5000/gcr.io/google_containers/pause
@@ -177,8 +174,6 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	echo "make uninstall: Uninstalling CRDs"
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-	echo "[Jesse] Uninstalling required add-on roles/bindings"
-	kubectl delete -f ./config/rbac/goop_ds_manager_role.yaml
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.

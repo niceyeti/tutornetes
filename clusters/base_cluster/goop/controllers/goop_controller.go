@@ -58,11 +58,17 @@ type GoopReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// TODO:
+// - fix state pattern and double creation
+// - webhook would be cool
+// - rbac labels
+
 // TODO: [Jesse] replace manually-created daemonset RBACs with this workflow.
 // See 'RBAC markers': https://book.kubebuilder.io/cronjob-tutorial/controller-overview.html
 //+kubebuilder:rbac:groups=goop.example.com,resources=goops,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=goop.example.com,resources=goops/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=goop.example.com,resources=goops/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -123,7 +129,11 @@ func (r *GoopReconciler) Reconcile(
 
 	// Adds a finalizer, then we can define some operations that should occur
 	// before the custom resource deletion.
-	// TODO (Jesse): figure out finalizer reqs
+	// TODO (Jesse): figure out finalizer reqs. A finalizer is for custom behavior/state;
+	// for example, note that the daemonsets created for a Goop job deleted automatically
+	// since the api-server knows that they are owned by the Goop object. Thus currently
+	// there is nothing else to clean up; best practice is probably to rely on ownership
+	// and avoid finalizers.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 	if !controllerutil.ContainsFinalizer(goop, goopFinalizer) {
 		log.Info("Adding Finalizer for goop")
@@ -293,9 +303,9 @@ func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
 	// of finalizers include performing backups and deleting
 	// resources that are not owned by this CR, like a PVC.
 
-	// Note: It is not recommended to use finalizers with the purpose of delete resources which are
+	// Note: It is not recommended to use finalizers to delete resources which are
 	// created and managed in the reconciliation. These ones, such as the Daemonset created on this reconcile,
-	// are defined as depended of the custom resource. See that we use the method ctrl.SetControllerReference.
+	// are defined as depended of the custom resource. See the method ctrl.SetControllerReference.
 	// to set the ownerRef which means that the Deployment will be deleted by the Kubernetes API.
 	// More info: https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/
 }
