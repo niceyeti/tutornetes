@@ -104,7 +104,16 @@ func (r *GoopReconciler) setStatusCondition(
 	return updated, nil
 }
 
+// TODO: I'm still working out these handler signatures. The only issue is deciding
+// how the handlers can update the goop object which gets passed to subsequent
+// handlers, since many handlers will modify and subsequently request the latest
+// copy of the goop object. I'm going to take a walk for lunch and think about
+// a clean way to do this; code is getting kludgy. The 'simple' will fall in place
+// soon; time to hammer the delete key.
+
 // HandlerFunc is a handler with the following signature.
+// If error is non-nil, then
+// If *ctrl.Result is non-nil, it means no error occurred, but Reconciliation should stop.
 type HandlerFunc func(context.Context, *logr.Logger, *goopv1alpha1.Goop) (*ctrl.Result, error)
 
 // StateHandler defines its own internal handling and state, then calls the passed
@@ -116,38 +125,62 @@ type HandlerFunc func(context.Context, *logr.Logger, *goopv1alpha1.Goop) (*ctrl.
 //	SomeHandler( GetFoo, CreateFoo, UpdateFoo, DeleteFoo)
 type StateHandler func(...HandlerFunc) HandlerFunc
 
-func (r *GoopReconciler) HandleReconciliation(
-	ctx context.Context,
-	req ctrl.Request,
-	handler StateHandler,
-) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-	return handler()(ctx, log, nil)
-}
-
-func (r *GoopReconciler) FetchGoop(
-	req ctrl.Request,
-	handlers ...HandlerFunc) HandlerFunc {
-	return func(ctx context.Context, log *logr.Logger, _ *goopv1alpha1.Goop) (ctrl.Result, error) {
+func (r *GoopReconciler) HandleGoop(req ctrl.Request, handlers ...HandlerFunc) HandlerFunc {
+	return func(ctx context.Context, log *logr.Logger, _ *goopv1alpha1.Goop) (*ctrl.Result, error) {
 		goop, err := r.fetchGoop(ctx, req.NamespacedName)
 		if err != nil {
 			// Error reading the object - requeue the request.
 			log.Error(err, "Failed to get goop")
-			return ctrl.Result{}, err
+			return &ctrl.Result{}, err
 		}
 		if goop == nil {
-			// If the custom resource is not found then, it usually means that it was deleted or not created
-			// In this way, we will stop the reconciliation.
+			// If the custom resource is not found then, it usually means that it
+			// was deleted or not created, so stop reconciliation.
 			log.Info("goop resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{}, nil
+			return &ctrl.Result{}, nil
 		}
 
-		for i, _ := range handlers {
-			result, err := handlers[i](ctx, log, goop)
-			if err != nil || result != nil {
-				return result, err
+		obj, _ := json.MarshalIndent(goop, "", " ")
+		log.Info("\nGoop:\n>>>" + string(obj) + "<<<\n")
+
+		return handleAll(ctx, log, goop, handlers...)
+	}
+}
+
+func handleAll(
+	ctx context.Context,
+	log *logr.Logger,
+	goop *goopv1alpha1.Goop,
+	handlers ...HandlerFunc,
+) (result *ctrl.Result, err error) {
+	for i, _ := range handlers {
+		result, err = handlers[i](ctx, log, goop)
+		if err != nil || result != nil {
+			return
+		}
+	}
+	return
+}
+
+func (r *GoopReconciler) EnsureInitialStatus(handlers ...HandlerFunc) HandlerFunc {
+	return func(ctx context.Context, log *logr.Logger, goop *goopv1alpha1.Goop) (*ctrl.Result, error) {
+		// Set the status as Unknown when no status are available
+		if len(goop.Status.Conditions) == 0 {
+			goop, err := r.setStatusCondition(
+				ctx,
+				goop,
+				metav1.Condition{
+					Type:    typeAvailableGoop,
+					Status:  metav1.ConditionUnknown,
+					Reason:  "Reconciling",
+					Message: "Starting reconciliation"})
+			if err != nil {
+				log.Error(err, "Failed to update goop status")
+				return &ctrl.Result{}, err
 			}
 		}
+
+		return nil, nil
 	}
 }
 
@@ -199,51 +232,18 @@ func (r *GoopReconciler) Reconcile(
 	// In part, the purpose is to check if the Custom Resource for the Kind Goop
 	// is applied on the cluster, and if not we return nil to stop the reconciliation.
 
-	type Handler func(context.Context, *logr.Logger, *goopv1alpha1.Goop) (ctrl.Result, error)
-	result, err := r.NewHandler(ctx, req,
-		r.FetchGoop(
-			r.EnsureInitialStatus,
-			r.EnsureFinalizer,
-			r.HandleDeletion,
-			r.HandleCreation(
-				r.MonitorCompletion,
-			),
-			// r.UpdateGoop
+	//type Handler func(context.Context, *logr.Logger, *goopv1alpha1.Goop) (ctrl.Result, error)
+	result, err := r.HandleGoop(
+		req,
+		r.EnsureInitialStatus,
+		r.EnsureFinalizer,
+		r.HandleDeletion,
+		r.HandleCreation(
+			r.MonitorCompletion,
 		),
-	)()
-	return result, err
-
-	goop, err := r.fetchGoop(ctx, req.NamespacedName)
-	if err != nil {
-		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get goop")
-		return ctrl.Result{}, err
-	}
-	if goop == nil {
-		// If the custom resource is not found then, it usually means that it was deleted or not created
-		// In this way, we will stop the reconciliation.
-		log.Info("goop resource not found. Ignoring since object must be deleted")
-		return ctrl.Result{}, nil
-	}
-
-	obj, _ := json.MarshalIndent(goop, "", " ")
-	log.Info("\nGoop:\n>>>" + string(obj) + "<<<\n")
-
-	// Set the status as Unknown when no status are available
-	if len(goop.Status.Conditions) == 0 {
-		goop, err = r.setStatusCondition(
-			ctx,
-			goop,
-			metav1.Condition{
-				Type:    typeAvailableGoop,
-				Status:  metav1.ConditionUnknown,
-				Reason:  "Reconciling",
-				Message: "Starting reconciliation"})
-		if err != nil {
-			log.Error(err, "Failed to update goop status")
-			return ctrl.Result{}, err
-		}
-	}
+		// r.HandleUpdate
+	)(ctx, &log, nil)
+	return *result, err
 
 	// Adds a finalizer, then we can define some operations that should occur
 	// before the custom resource deletion.
