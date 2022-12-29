@@ -41,6 +41,13 @@ I think this may have to do with kustomize?
     * do not namespace clusterroles, nor clusterrolebindings
     * daemonset api group is 'apps'
 
+## State design steps
+The Reconcile function receives requests when _____ (edge transition? what?).
+
+Note: update logic is explicitly not supported/developed because this is just a demo.
+Otherwise, one would have to implement delta logic to determine target/spec differences.
+
+
 
 
 
@@ -112,7 +119,7 @@ of scripts and code-generation workflows (which seem to change constantly), Oper
 somewhat easy to understand. Kubebuilder provides a more internal view of Operators and their programming requirements.
 
 ## Resources
-    
+
 Source for this project:
 * https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
 * https://sdk.operatorframework.io/docs/
@@ -121,6 +128,10 @@ Apis, Groups, and Versioning are core technical concepts:
 Kubebuilder is a great programmer resource for the internal guts of Operators.
 * https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html
 * a high quality hand-holding expedition: https://pres.metamagical.dev/kubecon-eu-2019.pdf
+Client architecture, per caching and queueing:
+* https://cloudark.medium.com/kubernetes-custom-controllers-b6c7d0668fdf
+State reconciliation:
+* https://www.artillery.io/blog/track-state-in-your-kubernetes-operator
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use

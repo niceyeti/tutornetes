@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	goopv1alpha1 "github.com/example/goop/api/v1alpha1"
+	"github.com/go-logr/logr"
 )
 
 // TODO (Jesse): revisit finalizer. See other TODO for link to docs.
@@ -58,12 +59,106 @@ type GoopReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// fetchGoop retrieves the Goop object from the k8s api using its namespaced name.
+func (r *GoopReconciler) fetchGoop(
+	ctx context.Context,
+	namespacedName types.NamespacedName,
+) (*goopv1alpha1.Goop, error) {
+	goop := &goopv1alpha1.Goop{}
+	if err := r.Get(ctx, namespacedName, goop); err != nil {
+		if apierrors.IsNotFound(err) {
+			// If the custom resource is not found then, it usually means that it was deleted or not created
+			// In this way, we will stop the reconciliation.
+			return nil, nil
+		}
+		// Error reading the object - caller should requeue the request.
+		return nil, err
+	}
+	return goop, nil
+}
+
+// Updates the goop status with the passed status and info.
+// We re-fetch the goop Custom Resource after updating the status so that
+// we have the latest state of the resource on the cluster and avoid
+// raising "the object has been modified, please apply your changes to the
+// latest version and try again" which would re-trigger the reconciliation
+// if we try to update it again in the following operation.
+func (r *GoopReconciler) setStatusCondition(
+	ctx context.Context,
+	goop *goopv1alpha1.Goop,
+	condition metav1.Condition,
+) (*goopv1alpha1.Goop, error) {
+	meta.SetStatusCondition(&goop.Status.Conditions, condition)
+	if err := r.Status().Update(ctx, goop); err != nil {
+		return nil, err
+	}
+
+	namespacedName := types.NamespacedName{
+		Namespace: goop.Namespace,
+		Name:      goop.Name,
+	}
+	updated := &goopv1alpha1.Goop{}
+	if err := r.Get(ctx, namespacedName, updated); err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+// HandlerFunc is a handler with the following signature.
+type HandlerFunc func(context.Context, *logr.Logger, *goopv1alpha1.Goop) (*ctrl.Result, error)
+
+// StateHandler defines its own internal handling and state, then calls the passed
+// handlers, whose success is presumably dependent on it and any predecessor handlers.
+// The expected implementation pattern is that for each HandlerFunc, if ctrl.Result or error are
+// non-nil, then return these immediately and abort subsequent handlers. This allows defining
+// handler dependencies in a sequence at the caller level:
+//
+//	SomeHandler( GetFoo, CreateFoo, UpdateFoo, DeleteFoo)
+type StateHandler func(...HandlerFunc) HandlerFunc
+
+func (r *GoopReconciler) HandleReconciliation(
+	ctx context.Context,
+	req ctrl.Request,
+	handler StateHandler,
+) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+	return handler()(ctx, log, nil)
+}
+
+func (r *GoopReconciler) FetchGoop(
+	req ctrl.Request,
+	handlers ...HandlerFunc) HandlerFunc {
+	return func(ctx context.Context, log *logr.Logger, _ *goopv1alpha1.Goop) (ctrl.Result, error) {
+		goop, err := r.fetchGoop(ctx, req.NamespacedName)
+		if err != nil {
+			// Error reading the object - requeue the request.
+			log.Error(err, "Failed to get goop")
+			return ctrl.Result{}, err
+		}
+		if goop == nil {
+			// If the custom resource is not found then, it usually means that it was deleted or not created
+			// In this way, we will stop the reconciliation.
+			log.Info("goop resource not found. Ignoring since object must be deleted")
+			return ctrl.Result{}, nil
+		}
+
+		for i, _ := range handlers {
+			result, err := handlers[i](ctx, log, goop)
+			if err != nil || result != nil {
+				return result, err
+			}
+		}
+	}
+}
+
 // TODO:
 // - fix state pattern and double creation
 // - webhook would be cool
-// - rbac labels
 
-// TODO: [Jesse] replace manually-created daemonset RBACs with this workflow.
+// These markers cause the appropriate RBAC resources to be created for the controller,
+// such as clusterroles and clusterrolebindings. Add as needed to interact with other
+// kubernetes resources within the controller. For example, I added the daemonset
+// roles so the controller can create and manipulate daemonsets.
 // See 'RBAC markers': https://book.kubebuilder.io/cronjob-tutorial/controller-overview.html
 //+kubebuilder:rbac:groups=goop.example.com,resources=goops,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=goop.example.com,resources=goops/status,verbs=get;update;patch
@@ -82,21 +177,53 @@ func (r *GoopReconciler) Reconcile(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
+	// TODO: I worked through the requirements of Reconcile just to understand some
+	// of the (extremely underdocumented!) requirements. But on reflection I think
+	// this code could be rewritten as chained handler functions, much like other
+	// Golang pipeline patterns whereby functions may either continue to handle
+	// a request for which they can make progress, or abort and return an error.
+	// Titmus' Cloud Native go has examples; see the CircuitBreaker pattern, et al.
+	// There a few repetititve patterns:
+	// 1) modify/update the Goop fields, then re-get it to avoid raising the error "the object
+	//    has been modified, please apply your changes to the latest version and try again".
+	//    These are low-level utilities returning errors.
+	// 2) The high-level pattern of chaining together mutators which either mutate
+	//    state and call the next handler, or abort handling. These are correlated
+	//    (return?) with the (ctrl.Result{},err) types below (and logging?).
+	// (2) could be written multiple ways, and I am unsure what would be the most readable,
+	// vs. mere procedural code like below. This is a good problem for code exercise
+	// since it encompasses a bunch of reqs for readability and testing. Should probably
+	// look at other controller implementations for best-practices.
+
 	// Fetch the Goop instance
-	// The purpose is to check if the Custom Resource for the Kind Goop
-	// is applied on the cluster, and if not we return nil to stop the reconciliation
-	goop := &goopv1alpha1.Goop{}
-	err := r.Get(ctx, req.NamespacedName, goop)
+	// In part, the purpose is to check if the Custom Resource for the Kind Goop
+	// is applied on the cluster, and if not we return nil to stop the reconciliation.
+
+	type Handler func(context.Context, *logr.Logger, *goopv1alpha1.Goop) (ctrl.Result, error)
+	result, err := r.NewHandler(ctx, req,
+		r.FetchGoop(
+			r.EnsureInitialStatus,
+			r.EnsureFinalizer,
+			r.HandleDeletion,
+			r.HandleCreation(
+				r.MonitorCompletion,
+			),
+			// r.UpdateGoop
+		),
+	)()
+	return result, err
+
+	goop, err := r.fetchGoop(ctx, req.NamespacedName)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// If the custom resource is not found then, it usually means that it was deleted or not created
-			// In this way, we will stop the reconciliation.
-			log.Info("goop resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{}, nil
-		}
 		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get goop")
 		return ctrl.Result{}, err
+	}
+	if goop == nil {
+		// If the custom resource is not found then, it usually means that it was deleted or not created
+		// In this way, we will stop the reconciliation.
+		log.Info("goop resource not found. Ignoring since object must be deleted")
+		return ctrl.Result{}, nil
 	}
 
 	obj, _ := json.MarshalIndent(goop, "", " ")
@@ -104,36 +231,27 @@ func (r *GoopReconciler) Reconcile(
 
 	// Set the status as Unknown when no status are available
 	if len(goop.Status.Conditions) == 0 {
-		meta.SetStatusCondition(
-			&goop.Status.Conditions,
+		goop, err = r.setStatusCondition(
+			ctx,
+			goop,
 			metav1.Condition{
 				Type:    typeAvailableGoop,
 				Status:  metav1.ConditionUnknown,
 				Reason:  "Reconciling",
 				Message: "Starting reconciliation"})
-		if err = r.Status().Update(ctx, goop); err != nil {
+		if err != nil {
 			log.Error(err, "Failed to update goop status")
-			return ctrl.Result{}, err
-		}
-
-		// Re-fetch the goop Custom Resource after updating the status so that
-		// we have the latest state of the resource on the cluster and we will avoid
-		// raising "the object has been modified, please apply your changes to the
-		// latest version and try again" which would re-trigger the reconciliation
-		// if we try to update it again in the following operations
-		if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
-			log.Error(err, "Failed to re-fetch goop")
 			return ctrl.Result{}, err
 		}
 	}
 
 	// Adds a finalizer, then we can define some operations that should occur
 	// before the custom resource deletion.
-	// TODO (Jesse): figure out finalizer reqs. A finalizer is for custom behavior/state;
-	// for example, note that the daemonsets created for a Goop job deleted automatically
+	// TODO (Jesse): could add finalizer reqs for exercise. Finalizers are for custom behavior/state;
+	// but note that the daemonsets created for a Goop job deleted automatically
 	// since the api-server knows that they are owned by the Goop object. Thus currently
-	// there is nothing else to clean up; best practice is probably to rely on ownership
-	// and avoid finalizers.
+	// there is nothing else to clean up. Best practice is probably to rely on ownership
+	// and avoid finalizer code bloat.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 	if !controllerutil.ContainsFinalizer(goop, goopFinalizer) {
 		log.Info("Adding Finalizer for goop")
