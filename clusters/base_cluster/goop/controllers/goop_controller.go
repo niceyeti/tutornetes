@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -178,6 +179,192 @@ func (r *GoopReconciler) EnsureInitialStatus(handlers ...HandlerFunc) HandlerFun
 				log.Error(err, "Failed to update goop status")
 				return &ctrl.Result{}, err
 			}
+
+			return handleAll(ctx, log, goop)
+		}
+
+		return nil, nil
+	}
+}
+
+func (r *GoopReconciler) EnsureFinalizer(handlers ...HandlerFunc) HandlerFunc {
+	return func(ctx context.Context, log *logr.Logger, goop *goopv1alpha1.Goop) (*ctrl.Result, error) {
+		// Adds a finalizer, then we can define some operations that should occur
+		// before the custom resource deletion.
+		// TODO (Jesse): could add finalizer reqs for exercise. Finalizers are for custom behavior/state;
+		// but note that the daemonsets created for a Goop job deleted automatically
+		// since the api-server knows that they are owned by the Goop object. Thus currently
+		// there is nothing else to clean up. Best practice is probably to rely on ownership
+		// and avoid finalizer code bloat.
+		// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
+		if !controllerutil.ContainsFinalizer(goop, goopFinalizer) {
+			log.Info("Adding Finalizer for goop")
+			if ok := controllerutil.AddFinalizer(goop, goopFinalizer); !ok {
+				log.Error(errors.New("failed to update finalizer"), "Failed to add finalizer into the custom resource")
+				return &ctrl.Result{Requeue: true}, nil
+			}
+
+			if err := r.Update(ctx, goop); err != nil {
+				log.Error(err, "Failed to update custom resource to add finalizer")
+				return &ctrl.Result{}, err
+			}
+
+			// Re-fetch the goop Custom Resource after updating the status so that
+			// we have the latest state of the resource on the cluster and we will avoid
+			// raising "the object has been modified, please apply your changes to the
+			// latest version and try again" which would re-trigger the reconciliation
+			// if we try to update it again in the following operations.
+			if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
+				log.Error(err, "Failed to re-fetch goop")
+				return &ctrl.Result{}, err
+			}
+		}
+		return nil, nil
+	}
+}
+
+func (r *GoopReconciler) HandleDeletion(handlers ...HandlerFunc) HandlerFunc {
+	return func(ctx context.Context, log *logr.Logger, goop *goopv1alpha1.Goop) (*ctrl.Result, error) {
+		// Check if the Goop instance is marked to be deleted, which is
+		// indicated by the deletion timestamp being set.
+		isGoopMarkedToBeDeleted := goop.GetDeletionTimestamp() != nil
+		if isGoopMarkedToBeDeleted {
+			if controllerutil.ContainsFinalizer(goop, goopFinalizer) {
+				log.Info("Performing Finalizer Operations for goop before deleting")
+
+				// Add a status "Downgrade" to define that this resource begins its process to be terminated.
+				meta.SetStatusCondition(
+					&goop.Status.Conditions,
+					metav1.Condition{
+						Type:    typeDegradedGoop,
+						Status:  metav1.ConditionUnknown,
+						Reason:  "Finalizing",
+						Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", goop.Name)})
+
+				if err := r.Status().Update(ctx, goop); err != nil {
+					log.Error(err, "Failed to update Memcached status")
+					return &ctrl.Result{}, err
+				}
+
+				// Perform all operations required before remove the finalizer and allow
+				// the Kubernetes API to remove the custom resource.
+				// TODO: I need to implement this
+				r.doFinalizerOperationsForGoop(goop)
+
+				// TODO(user): If you add operations to the doFinalizerOperationsForGoop method
+				// then you need to ensure that all worked fine before deleting and updating the Downgrade status
+				// otherwise, you should requeue here.
+
+				// Re-fetch the goop Custom Resource before updating its status,
+				// such that we have the latest state of the resource on the cluster and avoid
+				// raising "the object has been modified, please apply your changes to the
+				// latest version and try again" which would re-trigger the reconciliation
+				if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
+					log.Error(err, "Failed to re-fetch goop")
+					return &ctrl.Result{}, err
+				}
+
+				meta.SetStatusCondition(
+					&goop.Status.Conditions,
+					metav1.Condition{
+						Type:    typeDegradedGoop,
+						Status:  metav1.ConditionTrue,
+						Reason:  "Finalizing",
+						Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", goop.Name)})
+
+				if err := r.Status().Update(ctx, goop); err != nil {
+					log.Error(err, "Failed to update Memcached status")
+					return &ctrl.Result{}, err
+				}
+
+				log.Info("Removing Finalizer for goop after successfully performing operations")
+				if ok := controllerutil.RemoveFinalizer(goop, goopFinalizer); !ok {
+					log.Error(err, "Failed to remove finalizer for Goop")
+					return &ctrl.Result{Requeue: true}, nil
+				}
+
+				if err := r.Update(ctx, goop); err != nil {
+					log.Error(err, "Failed to remove finalizer for goop")
+					return &ctrl.Result{}, err
+				}
+			}
+			return &ctrl.Result{}, nil
+		}
+
+		return nil, nil
+	}
+}
+
+func (r *GoopReconciler) HandleCreation(handlers ...HandlerFunc) HandlerFunc {
+	return func(ctx context.Context, log *logr.Logger, goop *goopv1alpha1.Goop) (*ctrl.Result, error) {
+		// Check if the daemonset already exists, if not create a new one.
+		// NOTE: querying things like daemonsets requires RBAC permission by the
+		// service-account to do so. Failing to do so gives errors such as:
+		/// 'system:serviceaccount:goop-system:goop-controller-manager" cannot list resource "daemonsets" in API group "apps".
+		// The solution is simply to add the appropriate permissions via roles and rolebindings.
+		found := &appsv1.DaemonSet{}
+		err := r.Get(
+			ctx,
+			types.NamespacedName{
+				Name:      goop.Name,
+				Namespace: goop.Namespace,
+			},
+			found)
+		if err != nil && apierrors.IsNotFound(err) {
+			// Define a new deployment
+			ds, err := r.daemonsetForGoop(goop)
+			if err != nil {
+				log.Error(err, "Failed to define new Daemonset resource for Goop")
+				meta.SetStatusCondition(
+					&goop.Status.Conditions,
+					metav1.Condition{
+						Type:    typeAvailableGoop,
+						Status:  metav1.ConditionFalse,
+						Reason:  "Reconciling",
+						Message: fmt.Sprintf("Failed to create Daemonset for the custom resource (%s): (%s)", goop.Name, err)})
+
+				if err := r.Status().Update(ctx, goop); err != nil {
+					log.Error(err, "Failed to update goop status")
+					return &ctrl.Result{}, err
+				}
+
+				return &ctrl.Result{}, err
+			}
+
+			log.Info("Creating a new job Daemonset",
+				"Daemonset.Namespace", ds.Namespace, "Daemonset.Name", ds.Name)
+			if err = r.Create(ctx, ds); err != nil {
+				log.Error(err, "Failed to create new Daemonset",
+					"Daemonset.Namespace", ds.Namespace, "Daemonset.Name", ds.Name)
+				return &ctrl.Result{}, err
+			}
+
+			// DS created successfully
+			// We will requeue the reconciliation so that we can ensure the state
+			// and move forward for the next operations
+			return &ctrl.Result{RequeueAfter: time.Minute}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get Daemonset")
+			// Let's return the error for the reconciliation be re-trigged again
+			return &ctrl.Result{}, err
+		}
+
+		// TODO: [Jesse] The Goop operator currently has no update logic, primarily
+		// because its features are not complete (for demo purposes). Otherwise this
+		// would need to be done here by diffing goop.Spec and found.Spec.
+
+		// The following implementation will update the status
+		meta.SetStatusCondition(
+			&goop.Status.Conditions,
+			metav1.Condition{
+				Type:    typeAvailableGoop,
+				Status:  metav1.ConditionTrue,
+				Reason:  "Reconciling",
+				Message: fmt.Sprintf("Daemonset for custom resource (%s) created successfully", goop.Name)})
+
+		if err := r.Status().Update(ctx, goop); err != nil {
+			log.Error(err, "Failed to update Goop status")
+			return &ctrl.Result{}, err
 		}
 
 		return nil, nil
@@ -232,185 +419,24 @@ func (r *GoopReconciler) Reconcile(
 	// In part, the purpose is to check if the Custom Resource for the Kind Goop
 	// is applied on the cluster, and if not we return nil to stop the reconciliation.
 
-	//type Handler func(context.Context, *logr.Logger, *goopv1alpha1.Goop) (ctrl.Result, error)
+	// Pattern:
+	// - sequential handlers are independent of one another, form an abortable sequence
+	// - nested handlers represent required stages, independent branches, dependent goop modifications
+	// Specs:
+	// - return error: abort everything
+	// - return non-nil Result{}: abort handlers and requeue
+	// - else: call subsequent handlers
+
 	result, err := r.HandleGoop(
 		req,
 		r.EnsureInitialStatus,
 		r.EnsureFinalizer,
 		r.HandleDeletion,
-		r.HandleCreation(
-			r.MonitorCompletion,
-		),
+		r.HandleCreation,
+		// r.MonitorCompletion,
 		// r.HandleUpdate
 	)(ctx, &log, nil)
 	return *result, err
-
-	// Adds a finalizer, then we can define some operations that should occur
-	// before the custom resource deletion.
-	// TODO (Jesse): could add finalizer reqs for exercise. Finalizers are for custom behavior/state;
-	// but note that the daemonsets created for a Goop job deleted automatically
-	// since the api-server knows that they are owned by the Goop object. Thus currently
-	// there is nothing else to clean up. Best practice is probably to rely on ownership
-	// and avoid finalizer code bloat.
-	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
-	if !controllerutil.ContainsFinalizer(goop, goopFinalizer) {
-		log.Info("Adding Finalizer for goop")
-		if ok := controllerutil.AddFinalizer(goop, goopFinalizer); !ok {
-			log.Error(err, "Failed to add finalizer into the custom resource")
-			return ctrl.Result{Requeue: true}, nil
-		}
-
-		if err = r.Update(ctx, goop); err != nil {
-			log.Error(err, "Failed to update custom resource to add finalizer")
-			return ctrl.Result{}, err
-		}
-
-		// Re-fetch the goop Custom Resource after updating the status so that
-		// we have the latest state of the resource on the cluster and we will avoid
-		// raising "the object has been modified, please apply your changes to the
-		// latest version and try again" which would re-trigger the reconciliation
-		// if we try to update it again in the following operations.
-		if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
-			log.Error(err, "Failed to re-fetch goop")
-			return ctrl.Result{}, err
-		}
-	}
-
-	// Check if the Goop instance is marked to be deleted, which is
-	// indicated by the deletion timestamp being set.
-	isGoopMarkedToBeDeleted := goop.GetDeletionTimestamp() != nil
-	if isGoopMarkedToBeDeleted {
-		if controllerutil.ContainsFinalizer(goop, goopFinalizer) {
-			log.Info("Performing Finalizer Operations for goop before deleting")
-
-			// Add a status "Downgrade" to define that this resource begins its process to be terminated.
-			meta.SetStatusCondition(
-				&goop.Status.Conditions,
-				metav1.Condition{
-					Type:    typeDegradedGoop,
-					Status:  metav1.ConditionUnknown,
-					Reason:  "Finalizing",
-					Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", goop.Name)})
-
-			if err := r.Status().Update(ctx, goop); err != nil {
-				log.Error(err, "Failed to update Memcached status")
-				return ctrl.Result{}, err
-			}
-
-			// Perform all operations required before remove the finalizer and allow
-			// the Kubernetes API to remove the custom resource.
-			// TODO: I need to implement this
-			r.doFinalizerOperationsForGoop(goop)
-
-			// TODO(user): If you add operations to the doFinalizerOperationsForGoop method
-			// then you need to ensure that all worked fine before deleting and updating the Downgrade status
-			// otherwise, you should requeue here.
-
-			// Re-fetch the goop Custom Resource before updating its status,
-			// such that we have the latest state of the resource on the cluster and avoid
-			// raising "the object has been modified, please apply your changes to the
-			// latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, goop); err != nil {
-				log.Error(err, "Failed to re-fetch goop")
-				return ctrl.Result{}, err
-			}
-
-			meta.SetStatusCondition(
-				&goop.Status.Conditions,
-				metav1.Condition{
-					Type:    typeDegradedGoop,
-					Status:  metav1.ConditionTrue,
-					Reason:  "Finalizing",
-					Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", goop.Name)})
-
-			if err := r.Status().Update(ctx, goop); err != nil {
-				log.Error(err, "Failed to update Memcached status")
-				return ctrl.Result{}, err
-			}
-
-			log.Info("Removing Finalizer for goop after successfully perform the operations")
-			if ok := controllerutil.RemoveFinalizer(goop, goopFinalizer); !ok {
-				log.Error(err, "Failed to remove finalizer for Goop")
-				return ctrl.Result{Requeue: true}, nil
-			}
-
-			if err := r.Update(ctx, goop); err != nil {
-				log.Error(err, "Failed to remove finalizer for goop")
-				return ctrl.Result{}, err
-			}
-		}
-		return ctrl.Result{}, nil
-	}
-
-	// Check if the daemonset already exists, if not create a new one.
-	// NOTE: querying things like daemonsets requires RBAC permission by the
-	// service-account to do so. Failing to do so gives errors such as:
-	/// 'system:serviceaccount:goop-system:goop-controller-manager" cannot list resource "daemonsets" in API group "apps".
-	// The solution is simply to add the appropriate permissions via roles and rolebindings.
-	found := &appsv1.DaemonSet{}
-	err = r.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      goop.Name,
-			Namespace: goop.Namespace,
-		},
-		found)
-	if err != nil && apierrors.IsNotFound(err) {
-		// Define a new deployment
-		ds, err := r.daemonsetForGoop(goop)
-		if err != nil {
-			log.Error(err, "Failed to define new Daemonset resource for Goop")
-			meta.SetStatusCondition(
-				&goop.Status.Conditions,
-				metav1.Condition{
-					Type:    typeAvailableGoop,
-					Status:  metav1.ConditionFalse,
-					Reason:  "Reconciling",
-					Message: fmt.Sprintf("Failed to create Daemonset for the custom resource (%s): (%s)", goop.Name, err)})
-
-			if err := r.Status().Update(ctx, goop); err != nil {
-				log.Error(err, "Failed to update goop status")
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{}, err
-		}
-
-		log.Info("Creating a new job Daemonset",
-			"Daemonset.Namespace", ds.Namespace, "Daemonset.Name", ds.Name)
-		if err = r.Create(ctx, ds); err != nil {
-			log.Error(err, "Failed to create new Daemonset",
-				"Daemonset.Namespace", ds.Namespace, "Daemonset.Name", ds.Name)
-			return ctrl.Result{}, err
-		}
-
-		// DS created successfully
-		// We will requeue the reconciliation so that we can ensure the state
-		// and move forward for the next operations
-		return ctrl.Result{RequeueAfter: time.Minute}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get Daemonset")
-		// Let's return the error for the reconciliation be re-trigged again
-		return ctrl.Result{}, err
-	}
-
-	// TODO: [Jesse] The Goop operator currently has no update logic, primarily
-	// because its features are not complete (for demo purposes). Otherwise this
-	// would need to be done here by diffing goop.Spec and found.Spec.
-
-	// The following implementation will update the status
-	meta.SetStatusCondition(
-		&goop.Status.Conditions,
-		metav1.Condition{
-			Type:    typeAvailableGoop,
-			Status:  metav1.ConditionTrue,
-			Reason:  "Reconciling",
-			Message: fmt.Sprintf("Daemonset for custom resource (%s) created successfully", goop.Name)})
-
-	if err := r.Status().Update(ctx, goop); err != nil {
-		log.Error(err, "Failed to update Goop status")
-		return ctrl.Result{}, err
-	}
 
 	return ctrl.Result{}, nil
 }
