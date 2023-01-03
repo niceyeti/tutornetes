@@ -203,10 +203,14 @@ func (r *GoopReconciler) EnsureInitialization(next HandlerFunc) HandlerFunc {
 			}
 			// Ensure post-conditions for this state: one condition, and it
 			if len(goop.Status.Conditions) == 0 {
-				return ctrl.Result{Requeue: true}, err
+				log.Info("requeueing until first condition is initialized")
+				return ctrl.Result{Requeue: true}, nil
 			}
+			log.Info("got sthign")
+			gr.goop = goop
 		}
 
+		log.Info("caling next()")
 		return next(ctx, log, gr)
 	}
 }
@@ -257,8 +261,11 @@ func (r *GoopReconciler) EnsureFinalizer(next HandlerFunc) HandlerFunc {
 				return ctrl.Result{}, err
 			}
 			gr.goop = goop
+		} else {
+			log.Info("no finalizer needed")
 		}
 
+		log.Info("Next from ensure-finalizer")
 		return next(ctx, log, gr)
 	}
 }
@@ -337,6 +344,7 @@ func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
 			return ctrl.Result{}, nil
 		}
 
+		log.Info("Next from delete")
 		return next(ctx, log, gr)
 	}
 }
@@ -363,6 +371,7 @@ func (r *GoopReconciler) HandleCompletion(next HandlerFunc) HandlerFunc {
 
 			if !isJobCompleted(ds) {
 				// Abort handlers and requeue to monitor job-completion.
+				log.Info("Requeueing to monitor for completion")
 				return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
 			}
 
@@ -380,6 +389,7 @@ func (r *GoopReconciler) HandleCompletion(next HandlerFunc) HandlerFunc {
 			}
 		}
 
+		log.Info("Next from completion func")
 		return next(ctx, log, gr)
 	}
 }
@@ -432,8 +442,11 @@ func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
 
 				return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
 			}
+		} else {
+			log.Info("Creation not run")
 		}
 
+		log.Info("Next from creation func")
 		return next(ctx, log, gr)
 	}
 }
