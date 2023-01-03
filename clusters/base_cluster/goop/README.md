@@ -42,14 +42,22 @@ I think this may have to do with kustomize?
     * daemonset api group is 'apps'
 
 ## State design steps
+
 The Reconcile function receives requests when _____ (edge transition? what?).
 
 Note: update logic is explicitly not supported/developed because this is just a demo.
 Otherwise, one would have to implement delta logic to determine target/spec differences.
 
+## Lessons learned
 
-
-
+I didn't make it far enough to implement robust state-based code patterns, which is a future
+side project. But like any stateful application, there are always hidden assumptions waiting
+to be violated, for example, pausing/unpausing the cluster with the operator running and 'test'
+Goop object created caused a funny cornercase to be reach. It doesn't matter the outcome
+of the cornercase, what matters is that I was weakly assuming that state would follow simple
+increments, but this is not the case. The coder implication is that you may have to code defensively
+around the entry/exit points of states to form 'whitelist' logic, 'whitelist' meaning that
+you ensure you are allowing only the devil you know into happy-paths.
 
 ## Goal
 

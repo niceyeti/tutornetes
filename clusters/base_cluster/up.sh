@@ -146,12 +146,12 @@ cat <<- EOF
 Commands:
     * Create a cluster from scratch:
         ./up.sh --new
-    * Restart a cluster:
-        ./up.sh --restart
-    * Delete ALL clusters, including k3d-managed registries:
-        ./up.sh --clean
     * Pause the cluster, saving the registry as well:
         ./up.sh --pause
+    * Restart a paused cluster:
+        ./up.sh --unpause
+    * Delete ALL clusters, including k3d-managed registries:
+        ./up.sh --clean
     * Updating config/k3d:
         Updating is best done manually, to refresh the fundamental components.
         Use `k3d config migrate k3d_config.yaml new_config.yaml`
@@ -184,7 +184,7 @@ do
         exit
     fi
 
-    if [[ $arg == "--restart" || $arg == "--start" ]]; then
+    if [[ $arg == "--restart" || $arg == "--start" || $arg == "--unpause" ]]; then
         restart
         exit
     fi
