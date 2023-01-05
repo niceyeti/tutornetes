@@ -43,26 +43,26 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// TODO (Jesse): revisit finalizer. See other TODO for link to docs.
+// No goop finalization is needed, I kept this for demo purposes.
 const goopFinalizer = "goop.example.com/finalizer"
 
 // Definitions to manage status conditions
 const (
 	// typeAvailableGoop represents the status of the Deployment reconciliation
 	typeAvailableGoop = "Available"
-	// typeDegradedGoop represents the status used when the custom resource is deleted and the finalizer operations are must to occur.
+	// typeDegradedGoop represents the status used when the custom resource is deleted and the finalizer operations must to occur.
 	typeDegradedGoop = "Degraded"
 )
 
 const (
 	// The first state of the Goop object.
-	initializing = "Initializing"
-	// After initialization, the daemonset 'job' is deployed.
-	deploying = "Deploying"
+	initialized = "Initialized"
+	// The daemonset 'job' is deployed.
+	deployed = "Deployed"
 	// The daemonset 'job' has completed.
 	completed = "Completed"
 	// The daemonset is being finalized and deleted.
-	finalizing = "Finalizing"
+	finalized = "Finalized"
 )
 
 // GoopReconciler reconciles a Goop object
@@ -70,6 +70,13 @@ type GoopReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
+
+const (
+	// The logging level.
+	ENV_LOG_LEVEL = "LOG_LEVEL"
+	// Noisier logs.
+	verbose = 1
+)
 
 // fetchGoop retrieves the Goop object from the k8s api using its namespaced name.
 func (r *GoopReconciler) fetchGoop(
@@ -89,12 +96,25 @@ func (r *GoopReconciler) fetchGoop(
 	return goop, nil
 }
 
-// Updates the goop status with the passed status and info.
+// Updates the goop status with the passed status-condition and info.
 // We re-fetch the goop Custom Resource after updating the status so that
 // we have the latest state of the resource on the cluster and avoid
 // raising "the object has been modified, please apply your changes to the
 // latest version and try again" which would re-trigger the reconciliation
 // if we try to update it again in the following operation.
+// API notes: there is much historical discussion per the patterns and
+// practices for using Conditions. To clarify what I've learned:
+//   - use Phase for high-level info, such as merely "Running" or "Failed".
+//   - some use a "Ready" condition type and store the actual state within
+//     the Condition's Reason field.
+//   - I'm going to use Condition's Reason to define state, unlike Pods.
+//     The Type will always be Available or Degraded, simply because this
+//     is the convention of the generated controller code.
+//     Conditions have some feature bloat covering requirements I don't have,
+//     such as substates (true, false, unknown), don't be distracted by these.
+//
+// The number of states and substatuses one attempts to encode into Conditions
+// can be seen as a code smell, and overall a distraction of state machine development.
 func (r *GoopReconciler) setStatusCondition(
 	ctx context.Context,
 	goop *goopv1alpha1.Goop,
@@ -104,7 +124,6 @@ func (r *GoopReconciler) setStatusCondition(
 	if err := r.Status().Update(ctx, goop); err != nil {
 		return nil, err
 	}
-
 	namespacedName := types.NamespacedName{
 		Namespace: goop.Namespace,
 		Name:      goop.Name,
@@ -117,14 +136,12 @@ func (r *GoopReconciler) setStatusCondition(
 	return updated, nil
 }
 
-// TODO: I'm still working out these handler signatures. The only issue is deciding
-// how the handlers can update the goop object which gets passed to subsequent
-// handlers, since many handlers will modify and subsequently request the latest
-// copy of the goop object. I'm going to take a walk for lunch and think about
-// a clean way to do this; code is getting kludgy. The 'simple' will fall in place
-// soon; time to hammer the delete key.
-
 // HandlerFunc is a handler with the same return signature as Reconcile.
+// I am not incredibly satisfied with this pattern, in retrospect, and since
+// implementing it I have seen cleaner patterns like the IBM operator: https://github.com/IBM/operator-sample-go
+// The downside is merely readability. The handler chain pass-go/no-go style
+// code can actually be somewhat confusing when implementing and debugging the
+// operator.
 type HandlerFunc func(context.Context, *logr.Logger, *goopRequest) (ctrl.Result, error)
 
 // goopRequest merely encapsulates the request to allow
@@ -133,15 +150,6 @@ type goopRequest struct {
 	req  *ctrl.Request
 	goop *goopv1alpha1.Goop
 }
-
-// StateHandler defines its own internal handling and state, then calls the passed
-// handlers, whose success is presumably dependent on it and any predecessor handlers.
-// The expected implementation pattern is that for each HandlerFunc, if ctrl.Result or error are
-// non-nil, then return these immediately and abort subsequent handlers. This allows defining
-// handler dependencies in a sequence at the caller level:
-//
-//	SomeHandler( GetFoo, CreateFoo, UpdateFoo, DeleteFoo)
-type StateHandler func(...HandlerFunc) HandlerFunc
 
 func isInitialState(goop *goopv1alpha1.Goop) bool {
 	return len(goop.Status.Conditions) == 0
@@ -155,11 +163,6 @@ func isState(goop *goopv1alpha1.Goop, status string) bool {
 func isCompletedState(goop *goopv1alpha1.Goop, status string) bool {
 	return isState(goop, status) &&
 		goop.Status.Conditions[len(goop.Status.Conditions)-1].Status == metav1.ConditionTrue
-}
-
-func isIncompletedState(goop *goopv1alpha1.Goop, status string) bool {
-	return isState(goop, status) &&
-		goop.Status.Conditions[len(goop.Status.Conditions)-1].Status == metav1.ConditionFalse
 }
 
 func (r *GoopReconciler) HandleGoop(req *ctrl.Request, next HandlerFunc) HandlerFunc {
@@ -195,22 +198,21 @@ func (r *GoopReconciler) EnsureInitialization(next HandlerFunc) HandlerFunc {
 				metav1.Condition{
 					Type:    typeAvailableGoop,
 					Status:  metav1.ConditionUnknown,
-					Reason:  initializing,
+					Reason:  initialized,
 					Message: "Starting reconciliation"})
 			if err != nil {
 				log.Error(err, "Failed to update goop status")
 				return ctrl.Result{}, err
 			}
-			// Ensure post-conditions for this state: one condition, and it
+			// Ensure post-conditions for this state: first condition set and retrieved
 			if len(goop.Status.Conditions) == 0 {
-				log.Info("requeueing until first condition is initialized")
+				log.Info("Requeueing until first condition is initialized")
 				return ctrl.Result{Requeue: true}, nil
 			}
-			log.Info("got sthign")
 			gr.goop = goop
 		}
 
-		log.Info("caling next()")
+		log.Info("caling next() from EnsureInitialization")
 		return next(ctx, log, gr)
 	}
 }
@@ -225,7 +227,7 @@ func (r *GoopReconciler) EnsureFinalizer(next HandlerFunc) HandlerFunc {
 		// there is nothing else to clean up. Best practice is probably to rely on ownership
 		// and avoid finalizer code bloat.
 		// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
-		if isState(gr.goop, initializing) && !controllerutil.ContainsFinalizer(gr.goop, goopFinalizer) {
+		if isState(gr.goop, initialized) && !controllerutil.ContainsFinalizer(gr.goop, goopFinalizer) {
 			log.Info("Adding Finalizer for goop")
 			if ok := controllerutil.AddFinalizer(gr.goop, goopFinalizer); !ok {
 				log.Error(errors.New("failed to update finalizer"), "Failed to add finalizer into the custom resource")
@@ -246,30 +248,32 @@ func (r *GoopReconciler) EnsureFinalizer(next HandlerFunc) HandlerFunc {
 				log.Error(err, "Failed to re-fetch goop")
 				return ctrl.Result{}, err
 			}
-
-			// The goop is now fully initialized, ready for creation.
-			goop, err := r.setStatusCondition(
-				ctx,
-				gr.goop,
-				metav1.Condition{
-					Type:    typeAvailableGoop,
-					Status:  metav1.ConditionTrue,
-					Reason:  initializing,
-					Message: "Initialization completed"})
-			if err != nil {
-				log.Error(err, "Failed to update goop status")
-				return ctrl.Result{}, err
-			}
-			gr.goop = goop
 		} else {
 			log.Info("no finalizer needed")
 		}
 
+		// The goop is now fully initialized, ready for creation.
+		goop, err := r.setStatusCondition(
+			ctx,
+			gr.goop,
+			metav1.Condition{
+				Type:    typeAvailableGoop,
+				Status:  metav1.ConditionTrue,
+				Reason:  initialized,
+				Message: "Initialization completed"})
+		if err != nil {
+			log.Error(err, "Failed to update goop status")
+			return ctrl.Result{}, err
+		}
+
+		gr.goop = goop
 		log.Info("Next from ensure-finalizer")
 		return next(ctx, log, gr)
 	}
 }
 
+// HandleDeletion checks if the Goop object is to be deleted, and if so,
+// performs deletion tasks and aborts other handlers.
 func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 		// Check if the Goop instance is marked to be deleted, which is
@@ -285,7 +289,7 @@ func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
 					metav1.Condition{
 						Type:    typeDegradedGoop,
 						Status:  metav1.ConditionUnknown,
-						Reason:  finalizing,
+						Reason:  finalized,
 						Message: fmt.Sprintf("Performing goop finalizer operations for %s ", gr.req.NamespacedName)})
 
 				if err := r.Status().Update(ctx, gr.goop); err != nil {
@@ -316,7 +320,7 @@ func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
 					metav1.Condition{
 						Type:    typeDegradedGoop,
 						Status:  metav1.ConditionTrue,
-						Reason:  finalizing,
+						Reason:  finalized,
 						Message: fmt.Sprintf("Finalization for goop %s completed", gr.goop.Name)})
 
 				if err := r.Status().Update(ctx, gr.goop); err != nil {
@@ -341,6 +345,7 @@ func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
 			// is completely deleted (and its result perhaps recored in the Goop object). This
 			// may be accomplished simply, by requeueing after a few seconds and verifying
 			// daemonset deletion before completing deletion of the goop object.
+			log.Info("Aborting from delete with: ctrl.Result{}, nil. There should be no further calls.")
 			return ctrl.Result{}, nil
 		}
 
@@ -349,55 +354,10 @@ func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
 	}
 }
 
-// FUTURE: this is just a perfunctory example of checking the properties of
-// some running object: daemonset, job, etc. The internals of this implementation
-// are critical to one's requirements; here, I merely check that the daemonset is
-// fully available and ready, which isn't necessarily a robust check of whether
-// or not jobs completed, aka their tool processes returned 0.
-func isJobCompleted(ds *appsv1.DaemonSet) bool {
-	return ds.Status.DesiredNumberScheduled == ds.Status.NumberReady &&
-		ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable
-}
-
-func (r *GoopReconciler) HandleCompletion(next HandlerFunc) HandlerFunc {
-	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
-		if isIncompletedState(gr.goop, deploying) {
-			ds := &appsv1.DaemonSet{}
-			err := r.Get(ctx, gr.req.NamespacedName, ds)
-			if err != nil && !apierrors.IsNotFound(err) {
-				log.Error(err, "Failed to get Daemonset")
-				return ctrl.Result{}, err
-			}
-
-			if !isJobCompleted(ds) {
-				// Abort handlers and requeue to monitor job-completion.
-				log.Info("Requeueing to monitor for completion")
-				return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
-			}
-
-			meta.SetStatusCondition(
-				&gr.goop.Status.Conditions,
-				metav1.Condition{
-					Type:    typeAvailableGoop,
-					Status:  metav1.ConditionTrue,
-					Reason:  completed,
-					Message: fmt.Sprintf("Daemonset for goop completed successfully (%s): (%s)", gr.goop.Name, err)})
-
-			if err := r.Status().Update(ctx, gr.goop); err != nil {
-				log.Error(err, "Failed to update goop status in creation")
-				return ctrl.Result{}, err
-			}
-		}
-
-		log.Info("Next from completion func")
-		return next(ctx, log, gr)
-	}
-}
-
 func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 		// Only create daemonset after completing initialization
-		if isCompletedState(gr.goop, initializing) {
+		if isCompletedState(gr.goop, initialized) {
 			// Check if the daemonset already exists, if not create a new one.
 			// NOTE: querying things like daemonsets requires RBAC permission by the
 			// service-account to do so. Failing to do so gives errors such as:
@@ -406,7 +366,7 @@ func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
 			ds := &appsv1.DaemonSet{}
 			err := r.Get(ctx, gr.req.NamespacedName, ds)
 			if err != nil && !apierrors.IsNotFound(err) {
-				log.Error(err, "Failed to get Daemonset")
+				log.Error(err, fmt.Sprintf("Unknown error getting Daemonset for goop %s", gr.req.NamespacedName))
 				return ctrl.Result{}, err
 			}
 
@@ -432,7 +392,7 @@ func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
 					metav1.Condition{
 						Type:    typeAvailableGoop,
 						Status:  metav1.ConditionTrue,
-						Reason:  deploying,
+						Reason:  deployed,
 						Message: fmt.Sprintf("Daemonset created for goop (%s): (%s)", gr.goop.Name, err)})
 
 				if err := r.Status().Update(ctx, gr.goop); err != nil {
@@ -442,11 +402,54 @@ func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
 
 				return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
 			}
-		} else {
-			log.Info("Creation not run")
 		}
 
 		log.Info("Next from creation func")
+		return next(ctx, log, gr)
+	}
+}
+
+// FUTURE: this is just a perfunctory example of checking the properties of
+// some k8s object: daemonset, job, etc. The internals of this implementation
+// are one's cluster-wide requirements; here, I merely check that the daemonset is
+// fully available and ready, which isn't necessarily a robust check of whether
+// or not jobs completed, aka their tool processes returned 0.
+func isJobCompleted(ds *appsv1.DaemonSet) bool {
+	return ds.Status.DesiredNumberScheduled == ds.Status.NumberReady &&
+		ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable
+}
+
+func (r *GoopReconciler) HandleCompletion(next HandlerFunc) HandlerFunc {
+	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
+		if isCompletedState(gr.goop, deployed) {
+			ds := &appsv1.DaemonSet{}
+			err := r.Get(ctx, gr.req.NamespacedName, ds)
+			if err != nil && !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to get Daemonset")
+				return ctrl.Result{}, err
+			}
+
+			if !isJobCompleted(ds) {
+				// Abort handlers and requeue to monitor job-completion.
+				log.Info("Requeueing to monitor for completion in 3 seconds")
+				return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
+			}
+
+			meta.SetStatusCondition(
+				&gr.goop.Status.Conditions,
+				metav1.Condition{
+					Type:    typeAvailableGoop,
+					Status:  metav1.ConditionTrue,
+					Reason:  completed,
+					Message: fmt.Sprintf("Daemonset for goop completed successfully (%s): (%s)", gr.goop.Name, err)})
+
+			if err := r.Status().Update(ctx, gr.goop); err != nil {
+				log.Error(err, "Failed to update goop creation completion")
+				return ctrl.Result{}, err
+			}
+		}
+
+		log.Info("Next from completion func")
 		return next(ctx, log, gr)
 	}
 }
@@ -476,36 +479,6 @@ func (r *GoopReconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
-
-	// TODO: I worked through the requirements of Reconcile just to understand some
-	// of the extremely underdocumented requirements. But on reflection I think
-	// this code could be rewritten as chained handler functions, much like other
-	// Golang pipeline patterns whereby functions may either continue to handle
-	// a request for which they can make progress, or abort and return an error.
-	// Titmus' Cloud Native go has examples; see the CircuitBreaker pattern, et al.
-	// There a few repetititve patterns:
-	// 1) modify/update the Goop fields, then re-get it to avoid raising the error "the object
-	//    has been modified, please apply your changes to the latest version and try again".
-	//    These are low-level utilities returning errors.
-	// 2) The high-level pattern of chaining together mutators which either mutate
-	//    state and call the next handler, or abort handling. These are correlated
-	//    (return?) with the (ctrl.Result{},err) types below (and logging?).
-	// (2) could be written multiple ways, and I am unsure what would be the most readable,
-	// vs. mere procedural code like below. This is a good problem for code exercise
-	// since it encompasses a bunch of reqs for readability and testing. Should probably
-	// look at other controller implementations for best-practices.
-
-	// Fetch the Goop instance
-	// In part, the purpose is to check if the Custom Resource for the Kind Goop
-	// is applied on the cluster, and if not we return nil to stop the reconciliation.
-
-	// Pattern:
-	// - sequential handlers are independent of one another, form an abortable sequence
-	// - nested handlers represent required stages, independent branches, dependent goop modifications
-	// Specs:
-	// - return error: abort everything
-	// - return non-nil Result{}: abort handlers and requeue
-	// - else: call subsequent handlers
 
 	// TODO: [Jesse] The Goop operator currently has no update logic, primarily
 	// because its features are not complete (for demo purposes). Otherwise this

@@ -128,6 +128,10 @@ somewhat easy to understand. Kubebuilder provides a more internal view of Operat
 
 ## Resources
 
+Most useful:
+* https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+* https://maelvls.dev/kubernetes-conditions/
+
 Source for this project:
 * https://sdk.operatorframework.io/docs/building-operators/golang/tutorial/
 * https://sdk.operatorframework.io/docs/
@@ -140,6 +144,16 @@ Client architecture, per caching and queueing:
 * https://cloudark.medium.com/kubernetes-custom-controllers-b6c7d0668fdf
 State reconciliation:
 * https://www.artillery.io/blog/track-state-in-your-kubernetes-operator
+
+Others:
+* https://banzaicloud.com/blog/operator-sdk/
+* https://developer.ibm.com/articles/kubernetes-operators-patterns-and-best-practices/
+* https://developer.ibm.com/articles/introduction-to-kubernetes-operators/
+    * https://github.com/IBM/operator-sample-go
+    * https://ibm.github.io/operator-sample-go-documentation/
+* https://itnext.io/kubernetes-operator-development-guidelines-for-improved-usability-222390b00dc4
+
+
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use
