@@ -170,9 +170,14 @@ func isState(goop *goopv1alpha1.Goop, status string) bool {
 		goop.Status.Conditions[len(goop.Status.Conditions)-1].Reason == status
 }
 
-func isCompletedState(goop *goopv1alpha1.Goop, status string) bool {
+func isCompleteState(goop *goopv1alpha1.Goop, status string) bool {
 	return isState(goop, status) &&
 		goop.Status.Conditions[len(goop.Status.Conditions)-1].Status == metav1.ConditionTrue
+}
+
+func isIncompleteState(goop *goopv1alpha1.Goop, status string) bool {
+	return isState(goop, status) &&
+		goop.Status.Conditions[len(goop.Status.Conditions)-1].Status != metav1.ConditionTrue
 }
 
 func (r *GoopReconciler) handleGoop(req *ctrl.Request, next HandlerFunc) HandlerFunc {
@@ -206,7 +211,7 @@ func (r *GoopReconciler) ensureInitialization(next HandlerFunc) HandlerFunc {
 				ctx,
 				gr.goop,
 				metav1.Condition{
-					Type:    typeAvailableGoop,
+					Type:    initialized,
 					Status:  metav1.ConditionUnknown,
 					Reason:  initialized,
 					Message: "Starting reconciliation"})
@@ -232,10 +237,10 @@ func (r *GoopReconciler) ensureFinalizer(next HandlerFunc) HandlerFunc {
 		// Adds a finalizer, then we can define some operations that should occur
 		// before the custom resource deletion.
 		// TODO (Jesse): could add finalizer reqs for exercise. Finalizers are for custom behavior/state;
-		// but note that the daemonsets created for a Goop job deleted automatically
+		// but note that the daemonsets created for a Goop job are deleted automatically
 		// since the api-server knows that they are owned by the Goop object. Thus currently
 		// there is nothing else to clean up. Best practice is probably to rely on ownership
-		// and avoid finalizer code bloat.
+		// where possible and avoid finalizer code bloat.
 		// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 		if isState(gr.goop, initialized) && !controllerutil.ContainsFinalizer(gr.goop, goopFinalizer) {
 			log.Info("Adding Finalizer for goop")
@@ -258,24 +263,26 @@ func (r *GoopReconciler) ensureFinalizer(next HandlerFunc) HandlerFunc {
 				log.Error(err, "Failed to re-fetch goop")
 				return ctrl.Result{}, err
 			}
-		} else {
-			log.Info("No finalizer needed")
 		}
 
-		// The goop is now fully initialized, ready for creation.
-		goop, err := r.setStatusCondition(
-			ctx,
-			gr.goop,
-			metav1.Condition{
-				Type:    typeAvailableGoop,
-				Status:  metav1.ConditionTrue,
-				Reason:  initialized,
-				Message: "Initialization completed"})
-		if err != nil {
-			log.Error(err, "Failed to update goop status")
-			return ctrl.Result{}, err
+		// After every initial thing is complete, most of which does not involve
+		// cluster modification, mark initialization as completed.
+		if isIncompleteState(gr.goop, initialized) {
+			// The goop is now fully initialized, ready for creation.
+			goop, err := r.setStatusCondition(
+				ctx,
+				gr.goop,
+				metav1.Condition{
+					Type:    initialized,
+					Status:  metav1.ConditionTrue,
+					Reason:  initialized,
+					Message: "Initialization completed"})
+			if err != nil {
+				log.Error(err, "Failed to update goop status")
+				return ctrl.Result{}, err
+			}
+			gr.goop = goop
 		}
-		gr.goop = goop
 
 		log.Info("Calling next() from ensureFinalizer")
 		return next(ctx, log, gr)
@@ -292,20 +299,20 @@ func (r *GoopReconciler) handleDeletion(next HandlerFunc) HandlerFunc {
 		if isGoopMarkedToBeDeleted {
 			if controllerutil.ContainsFinalizer(gr.goop, goopFinalizer) {
 				log.Info("Performing Finalizer Operations for goop before deleting")
-
 				// Add a status "Downgrade" to define that this resource begins its process to be terminated.
-				meta.SetStatusCondition(
-					&gr.goop.Status.Conditions,
+				goop, err := r.setStatusCondition(
+					ctx,
+					gr.goop,
 					metav1.Condition{
-						Type:    typeDegradedGoop,
+						Type:    finalized,
 						Status:  metav1.ConditionUnknown,
 						Reason:  finalized,
-						Message: fmt.Sprintf("Performing goop finalizer operations for %s ", gr.req.NamespacedName)})
-
-				if err := r.Status().Update(ctx, gr.goop); err != nil {
+						Message: fmt.Sprintf("Performing goop finalizer operations for %s", gr.req.NamespacedName)})
+				if err != nil {
 					log.Error(err, "Failed to update goop status")
 					return ctrl.Result{}, err
 				}
+				gr.goop = goop
 
 				// Perform all operations required before remove the finalizer and allow
 				// the Kubernetes API to remove the custom resource.
@@ -325,41 +332,48 @@ func (r *GoopReconciler) handleDeletion(next HandlerFunc) HandlerFunc {
 					return ctrl.Result{}, err
 				}
 
-				meta.SetStatusCondition(
-					&gr.goop.Status.Conditions,
-					metav1.Condition{
-						Type:    typeDegradedGoop,
-						Status:  metav1.ConditionTrue,
-						Reason:  finalized,
-						Message: fmt.Sprintf("Finalization for goop %s completed", gr.goop.Name)})
-
-				if err := r.Status().Update(ctx, gr.goop); err != nil {
-					log.Error(err, "Failed to update goop status")
-					return ctrl.Result{}, err
-				}
-
 				log.Info("Removing Finalizer for goop after successfully performing operations")
 				if ok := controllerutil.RemoveFinalizer(gr.goop, goopFinalizer); !ok {
 					log.Error(errors.New("failed to remove finalizer"), "Failed to remove finalizer for Goop")
 					return ctrl.Result{Requeue: true}, nil
 				}
 
-				if err := r.Update(ctx, gr.goop); err != nil {
-					log.Error(err, "Failed to remove finalizer for goop")
+				/*
+					if err := r.Update(ctx, gr.goop); err != nil {
+						log.Error(err, "Failed to remove finalizer for goop")
+						return ctrl.Result{}, err
+					}
+				*/
+
+				if err := r.Get(ctx, gr.req.NamespacedName, gr.goop); err != nil {
+					log.Error(err, "Failed to re-fetch goop")
 					return ctrl.Result{}, err
 				}
+
+				goop, err = r.setStatusCondition(ctx,
+					gr.goop,
+					metav1.Condition{
+						Type:    finalized,
+						Status:  metav1.ConditionTrue,
+						Reason:  finalized,
+						Message: fmt.Sprintf("Finalization for goop %s completed", gr.goop.Name)})
+				if err != nil {
+					log.Error(err, "Failed to update goop status")
+					return ctrl.Result{}, err
+				}
+				gr.goop = goop
 			}
 
 			// TODO: smooth out the corners of deletion. If deletion/finalization is completed,
 			// then this should possibly return nil,nil, with the requirement that the daemonset
-			// is completely deleted (and its result perhaps recored in the Goop object). This
+			// is completely deleted (and its result perhaps recorded in the Goop object). This
 			// may be accomplished simply, by requeueing after a few seconds and verifying
 			// daemonset deletion before completing deletion of the goop object.
 			log.Info("Aborting from delete with: ctrl.Result{}, nil. There should be no further calls.")
 			return ctrl.Result{}, nil
 		}
 
-		log.Info("Calling next from handleDeletion")
+		log.Info("Calling next() from handleDeletion")
 		return next(ctx, log, gr)
 	}
 }
@@ -380,7 +394,7 @@ func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
 func (r *GoopReconciler) handleCreation(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 		// Only create daemonset after completing initialization
-		if isCompletedState(gr.goop, initialized) {
+		if isCompleteState(gr.goop, initialized) {
 			log.Info("Checking daemonset in creation")
 			// Check if the daemonset already exists, if not create a new one.
 			// NOTE: querying things like daemonsets requires RBAC permission by the
@@ -414,10 +428,10 @@ func (r *GoopReconciler) handleCreation(next HandlerFunc) HandlerFunc {
 				meta.SetStatusCondition(
 					&gr.goop.Status.Conditions,
 					metav1.Condition{
-						Type:    typeAvailableGoop,
+						Type:    deployed,
 						Status:  metav1.ConditionTrue,
 						Reason:  deployed,
-						Message: fmt.Sprintf("Daemonset created for goop (%s): (%s)", gr.goop.Name, err)})
+						Message: fmt.Sprintf("Daemonset created for goop: %s", gr.goop.Name)})
 
 				if err := r.Status().Update(ctx, gr.goop); err != nil {
 					log.Error(err, "Failed to update goop status in creation")
@@ -447,7 +461,7 @@ func isJobCompleted(ds *appsv1.DaemonSet) bool {
 
 func (r *GoopReconciler) handleCompletion(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
-		if isCompletedState(gr.goop, deployed) {
+		if isCompleteState(gr.goop, deployed) {
 			log.Info("Checking for completion")
 
 			ds := &appsv1.DaemonSet{}
@@ -466,10 +480,10 @@ func (r *GoopReconciler) handleCompletion(next HandlerFunc) HandlerFunc {
 			meta.SetStatusCondition(
 				&gr.goop.Status.Conditions,
 				metav1.Condition{
-					Type:    typeAvailableGoop,
+					Type:    completed,
 					Status:  metav1.ConditionTrue,
 					Reason:  completed,
-					Message: fmt.Sprintf("Daemonset for goop completed successfully (%s): (%s)", gr.goop.Name, err)})
+					Message: fmt.Sprintf("Daemonset for goop completed successfully: %s", gr.goop.Name)})
 
 			if err := r.Status().Update(ctx, gr.goop); err != nil {
 				log.Error(err, "Failed to update goop creation completion")
