@@ -30,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/env"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,12 +72,21 @@ type GoopReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+var logLevel int
+
 const (
 	// The logging level.
 	ENV_LOG_LEVEL = "LOG_LEVEL"
-	// Noisier logs.
+	// Noisier logs: 1 = verbose. 0 = logr package default.
 	verbose = 1
 )
+
+func init() {
+	logLevel = verbose
+	if level, err := env.GetInt(ENV_LOG_LEVEL, verbose); err == nil {
+		logLevel = level
+	}
+}
 
 // fetchGoop retrieves the Goop object from the k8s api using its namespaced name.
 func (r *GoopReconciler) fetchGoop(
@@ -136,12 +146,12 @@ func (r *GoopReconciler) setStatusCondition(
 	return updated, nil
 }
 
-// HandlerFunc is a handler with the same return signature as Reconcile.
+// HandlerFunc has the same return signature as Reconcile for setting up chained handlers.
 // I am not incredibly satisfied with this pattern, in retrospect, and since
 // implementing it I have seen cleaner patterns like the IBM operator: https://github.com/IBM/operator-sample-go
 // The downside is merely readability. The handler chain pass-go/no-go style
 // code can actually be somewhat confusing when implementing and debugging the
-// operator.
+// operator, but worth considering/reworking.
 type HandlerFunc func(context.Context, *logr.Logger, *goopRequest) (ctrl.Result, error)
 
 // goopRequest merely encapsulates the request to allow
@@ -212,7 +222,7 @@ func (r *GoopReconciler) EnsureInitialization(next HandlerFunc) HandlerFunc {
 			gr.goop = goop
 		}
 
-		log.Info("caling next() from EnsureInitialization")
+		log.Info("calling next() from EnsureInitialization")
 		return next(ctx, log, gr)
 	}
 }
@@ -249,7 +259,7 @@ func (r *GoopReconciler) EnsureFinalizer(next HandlerFunc) HandlerFunc {
 				return ctrl.Result{}, err
 			}
 		} else {
-			log.Info("no finalizer needed")
+			log.Info("No finalizer needed")
 		}
 
 		// The goop is now fully initialized, ready for creation.
@@ -265,9 +275,9 @@ func (r *GoopReconciler) EnsureFinalizer(next HandlerFunc) HandlerFunc {
 			log.Error(err, "Failed to update goop status")
 			return ctrl.Result{}, err
 		}
-
 		gr.goop = goop
-		log.Info("Next from ensure-finalizer")
+
+		log.Info("Next from EnsureFinalizer")
 		return next(ctx, log, gr)
 	}
 }
@@ -349,9 +359,22 @@ func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
 			return ctrl.Result{}, nil
 		}
 
-		log.Info("Next from delete")
+		log.Info("Calling next from HandleDeletion")
 		return next(ctx, log, gr)
 	}
+}
+
+func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
+	// TODO(user): Add the cleanup steps that the operator
+	// needs to do before the CR can be deleted. Examples
+	// of finalizers include performing backups and deleting
+	// resources that are not owned by this CR, like a PVC.
+
+	// Note: It is not recommended to use finalizers to delete resources which are
+	// created and managed in the reconciliation. These ones, such as the Daemonset created on this reconcile,
+	// are defined as depended of the custom resource. See the method ctrl.SetControllerReference.
+	// to set the ownerRef which means that the Deployment will be deleted by the Kubernetes API.
+	// More info: https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/
 }
 
 func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
@@ -404,7 +427,7 @@ func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
 			}
 		}
 
-		log.Info("Next from creation func")
+		log.Info("Calling from HandleCreation")
 		return next(ctx, log, gr)
 	}
 }
@@ -449,13 +472,12 @@ func (r *GoopReconciler) HandleCompletion(next HandlerFunc) HandlerFunc {
 			}
 		}
 
-		log.Info("Next from completion func")
+		log.Info("Calling next from HandleCreation")
 		return next(ctx, log, gr)
 	}
 }
 
 // TODO:
-// - fix state pattern and double creation
 // - webhook would be cool
 
 // These markers cause the appropriate RBAC resources to be created for the controller,
@@ -478,7 +500,7 @@ func (r *GoopReconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	log := log.FromContext(ctx).V(logLevel)
 
 	// TODO: [Jesse] The Goop operator currently has no update logic, primarily
 	// because its features are not complete (for demo purposes). Otherwise this
@@ -489,7 +511,8 @@ func (r *GoopReconciler) Reconcile(
 	// chain, forming a linear chain of responsibility. Other patterns are possible,
 	// such as a functional graph of chains, rather than a straight line sequence of
 	// handlers. No need here though. There are a lot of code smells with recursive
-	// handlers, in terms of readability. It just seems over engineered.
+	// handlers, in terms of readability. It just seems over engineered. This
+	// pattern was implemented merely as a first-pass idea.
 	return r.HandleGoop(
 		&req,
 		r.EnsureInitialization(
@@ -502,19 +525,6 @@ func (r *GoopReconciler) Reconcile(
 
 func nilHandler(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
-}
-
-func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
-	// TODO(user): Add the cleanup steps that the operator
-	// needs to do before the CR can be deleted. Examples
-	// of finalizers include performing backups and deleting
-	// resources that are not owned by this CR, like a PVC.
-
-	// Note: It is not recommended to use finalizers to delete resources which are
-	// created and managed in the reconciliation. These ones, such as the Daemonset created on this reconcile,
-	// are defined as depended of the custom resource. See the method ctrl.SetControllerReference.
-	// to set the ownerRef which means that the Deployment will be deleted by the Kubernetes API.
-	// More info: https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/
 }
 
 // Returns the daemonset that implements jobs using init-containers.

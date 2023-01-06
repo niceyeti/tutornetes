@@ -74,6 +74,8 @@ spec:
         env:
           - name: GOOP_IMAGE
             value: k3d-devregistry:5000/busybox:latest
+          - name: LOG_LEVEL
+            value: 1
         image: k3d-devregistry:5000/controller:latest
         name: manager
         securityContext:
