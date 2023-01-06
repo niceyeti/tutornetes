@@ -175,7 +175,7 @@ func isCompletedState(goop *goopv1alpha1.Goop, status string) bool {
 		goop.Status.Conditions[len(goop.Status.Conditions)-1].Status == metav1.ConditionTrue
 }
 
-func (r *GoopReconciler) HandleGoop(req *ctrl.Request, next HandlerFunc) HandlerFunc {
+func (r *GoopReconciler) handleGoop(req *ctrl.Request, next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, _ *goopRequest) (ctrl.Result, error) {
 		gr := &goopRequest{req: req, goop: nil}
 		goop, err := r.fetchGoop(ctx, req.NamespacedName)
@@ -198,7 +198,7 @@ func (r *GoopReconciler) HandleGoop(req *ctrl.Request, next HandlerFunc) Handler
 	}
 }
 
-func (r *GoopReconciler) EnsureInitialization(next HandlerFunc) HandlerFunc {
+func (r *GoopReconciler) ensureInitialization(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 		// Set the status as Unknown when no status are available
 		if isInitialState(gr.goop) {
@@ -222,12 +222,12 @@ func (r *GoopReconciler) EnsureInitialization(next HandlerFunc) HandlerFunc {
 			gr.goop = goop
 		}
 
-		log.Info("calling next() from EnsureInitialization")
+		log.Info("Calling next() from ensureInitialization")
 		return next(ctx, log, gr)
 	}
 }
 
-func (r *GoopReconciler) EnsureFinalizer(next HandlerFunc) HandlerFunc {
+func (r *GoopReconciler) ensureFinalizer(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 		// Adds a finalizer, then we can define some operations that should occur
 		// before the custom resource deletion.
@@ -277,14 +277,14 @@ func (r *GoopReconciler) EnsureFinalizer(next HandlerFunc) HandlerFunc {
 		}
 		gr.goop = goop
 
-		log.Info("Next from EnsureFinalizer")
+		log.Info("Calling next() from ensureFinalizer")
 		return next(ctx, log, gr)
 	}
 }
 
-// HandleDeletion checks if the Goop object is to be deleted, and if so,
+// handleDeletion checks if the Goop object is to be deleted, and if so,
 // performs deletion tasks and aborts other handlers.
-func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
+func (r *GoopReconciler) handleDeletion(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 		// Check if the Goop instance is marked to be deleted, which is
 		// indicated by the deletion timestamp being set.
@@ -359,7 +359,7 @@ func (r *GoopReconciler) HandleDeletion(next HandlerFunc) HandlerFunc {
 			return ctrl.Result{}, nil
 		}
 
-		log.Info("Calling next from HandleDeletion")
+		log.Info("Calling next from handleDeletion")
 		return next(ctx, log, gr)
 	}
 }
@@ -377,10 +377,11 @@ func (r *GoopReconciler) doFinalizerOperationsForGoop(cr *goopv1alpha1.Goop) {
 	// More info: https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/
 }
 
-func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
+func (r *GoopReconciler) handleCreation(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 		// Only create daemonset after completing initialization
 		if isCompletedState(gr.goop, initialized) {
+			log.Info("Checking daemonset in creation")
 			// Check if the daemonset already exists, if not create a new one.
 			// NOTE: querying things like daemonsets requires RBAC permission by the
 			// service-account to do so. Failing to do so gives errors such as:
@@ -423,11 +424,12 @@ func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
 					return ctrl.Result{}, err
 				}
 
+				log.Info("Requeueing to check for daemonset completion in 3 seconds")
 				return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
 			}
 		}
 
-		log.Info("Calling from HandleCreation")
+		log.Info("Calling next from handleCreation")
 		return next(ctx, log, gr)
 	}
 }
@@ -435,16 +437,19 @@ func (r *GoopReconciler) HandleCreation(next HandlerFunc) HandlerFunc {
 // FUTURE: this is just a perfunctory example of checking the properties of
 // some k8s object: daemonset, job, etc. The internals of this implementation
 // are one's cluster-wide requirements; here, I merely check that the daemonset is
-// fully available and ready, which isn't necessarily a robust check of whether
-// or not jobs completed, aka their tool processes returned 0.
+// fully available and ready, which isn't a robust check of whether or not jobs
+// completed, aka their tool processes returned 0, which would have to be done by
+// checking the exit codes of all the init containers.
 func isJobCompleted(ds *appsv1.DaemonSet) bool {
 	return ds.Status.DesiredNumberScheduled == ds.Status.NumberReady &&
 		ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable
 }
 
-func (r *GoopReconciler) HandleCompletion(next HandlerFunc) HandlerFunc {
+func (r *GoopReconciler) handleCompletion(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
 		if isCompletedState(gr.goop, deployed) {
+			log.Info("Checking for completion")
+
 			ds := &appsv1.DaemonSet{}
 			err := r.Get(ctx, gr.req.NamespacedName, ds)
 			if err != nil && !apierrors.IsNotFound(err) {
@@ -472,13 +477,13 @@ func (r *GoopReconciler) HandleCompletion(next HandlerFunc) HandlerFunc {
 			}
 		}
 
-		log.Info("Calling next from HandleCreation")
+		log.Info("Calling next from handleCompletion")
 		return next(ctx, log, gr)
 	}
 }
 
 // TODO:
-// - webhook would be cool
+// - goop webhook would be cool
 
 // These markers cause the appropriate RBAC resources to be created for the controller,
 // such as clusterroles and clusterrolebindings. Add as needed to interact with other
@@ -512,14 +517,13 @@ func (r *GoopReconciler) Reconcile(
 	// such as a functional graph of chains, rather than a straight line sequence of
 	// handlers. No need here though. There are a lot of code smells with recursive
 	// handlers, in terms of readability. It just seems over engineered. This
-	// pattern was implemented merely as a first-pass idea.
-	return r.HandleGoop(
-		&req,
-		r.EnsureInitialization(
-			r.EnsureFinalizer(
-				r.HandleDeletion(
-					r.HandleCreation(
-						r.HandleCompletion(nilHandler))))),
+	// pattern was implemented merely as a first-pass.
+	return r.handleGoop(&req,
+		r.ensureInitialization(
+			r.ensureFinalizer(
+				r.handleDeletion(
+					r.handleCreation(
+						r.handleCompletion(nilHandler))))),
 	)(ctx, &log, nil)
 }
 
@@ -527,13 +531,15 @@ func nilHandler(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Re
 	return ctrl.Result{}, nil
 }
 
-// Returns the daemonset that implements jobs using init-containers.
+// Returns the daemonset that implements distributed jobs as init-containers.
 // Deploying Jobs to nodes such that a Job runs independently on every node
 // can be done using a Daemonset that runs the job logic in init containers.
 // Its very likely a more modern pattern exists, perhaps using Jobs with topology
 // spread constraints. I have no idea if the daemonset pattern obtains all desired
-// lifecycle requirements for job-like behavior, or if this is a hack.
-// This yaml pattern comes from the github issue reply here: https://github.com/kubernetes/kubernetes/issues/36601
+// lifecycle requirements for job-like behavior, or if this is a hack. This is
+// for demo purposes.
+// This yaml pattern comes from the github issue reply:
+// https://github.com/kubernetes/kubernetes/issues/36601
 func (r *GoopReconciler) daemonsetForGoop(
 	goop *goopv1alpha1.Goop,
 ) (*appsv1.DaemonSet, error) {
