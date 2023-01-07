@@ -1,0 +1,30 @@
+# This role allows the goop-controller to query and create daemonsets,
+# which are used as a distributed-job construct.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: goop-ds-manager
+rules:
+- apiGroups:
+  - "apps"
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: goop-ds-manager-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: goop-ds-manager
+subjects:
+- kind: ServiceAccount
+  name: goop-controller-manager
+  namespace: goop-system

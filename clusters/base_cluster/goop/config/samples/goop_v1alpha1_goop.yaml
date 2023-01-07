@@ -1,0 +1,12 @@
+apiVersion: goop.example.com/v1alpha1
+kind: Goop
+metadata:
+  labels:
+    app.kubernetes.io/name: goop
+    app.kubernetes.io/instance: goop-sample
+    app.kubernetes.io/part-of: goop
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: goop
+  name: goop-sample
+spec:
+  # TODO(user): Add fields here

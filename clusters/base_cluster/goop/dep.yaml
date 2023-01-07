@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "2"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{"deployment.kubernetes.io/revision":"1"},"creationTimestamp":"2022-12-20T22:38:38Z","generation":1,"labels":{"app.kubernetes.io/component":"manager","app.kubernetes.io/created-by":"goop","app.kubernetes.io/instance":"controller-manager","app.kubernetes.io/managed-by":"kustomize","app.kubernetes.io/name":"deployment","app.kubernetes.io/part-of":"goop","control-plane":"controller-manager"},"name":"goop-controller-manager","namespace":"goop-system","resourceVersion":"2062","uid":"85fd23fb-950f-4548-9c1d-ee3111ec185b"},"spec":{"progressDeadlineSeconds":600,"replicas":1,"revisionHistoryLimit":10,"selector":{"matchLabels":{"control-plane":"controller-manager"}},"strategy":{"rollingUpdate":{"maxSurge":"25%","maxUnavailable":"25%"},"type":"RollingUpdate"},"template":{"metadata":{"annotations":{"kubectl.kubernetes.io/default-container":"manager"},"creationTimestamp":null,"labels":{"control-plane":"controller-manager"}},"spec":{"affinity":{"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"kubernetes.io/arch","operator":"In","values":["amd64","arm64","ppc64le","s390x"]},{"key":"kubernetes.io/os","operator":"In","values":["linux"]}]}]}}},"containers":[{"args":["--secure-listen-address=0.0.0.0:8443","--upstream=http://127.0.0.1:8080/","--logtostderr=true","--v=0"],"image":"k3d-devregistry:5000/gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0","imagePullPolicy":"IfNotPresent","name":"kube-rbac-proxy","ports":[{"containerPort":8443,"name":"https","protocol":"TCP"}],"resources":{"limits":{"cpu":"500m","memory":"128Mi"},"requests":{"cpu":"5m","memory":"64Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}},"terminationMessagePath":"/dev/termination-log","terminationMessagePolicy":"File"},{"args":["--health-probe-bind-address=:8081","--metrics-bind-address=127.0.0.1:8080","--leader-elect"],"command":["/manager"],"image":"k3d-devregistry:5000/controller:latest","imagePullPolicy":"Always","livenessProbe":{"failureThreshold":3,"httpGet":{"path":"/healthz","port":8081,"scheme":"HTTP"},"initialDelaySeconds":15,"periodSeconds":20,"successThreshold":1,"timeoutSeconds":1},"name":"manager","readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/readyz","port":8081,"scheme":"HTTP"},"initialDelaySeconds":5,"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1},"resources":{"limits":{"cpu":"500m","memory":"128Mi"},"requests":{"cpu":"10m","memory":"64Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}},"terminationMessagePath":"/dev/termination-log","terminationMessagePolicy":"File"}],"dnsPolicy":"ClusterFirst","restartPolicy":"Always","schedulerName":"default-scheduler","securityContext":{"runAsNonRoot":true},"serviceAccount":"goop-controller-manager","serviceAccountName":"goop-controller-manager","terminationGracePeriodSeconds":10}}},"status":{"conditions":[{"lastTransitionTime":"2022-12-20T22:38:38Z","lastUpdateTime":"2022-12-20T22:38:38Z","message":"Deployment does not have minimum availability.","reason":"MinimumReplicasUnavailable","status":"False","type":"Available"},{"lastTransitionTime":"2022-12-20T22:48:39Z","lastUpdateTime":"2022-12-20T22:48:39Z","message":"ReplicaSet \"goop-controller-manager-865fbc9977\" has timed out progressing.","reason":"ProgressDeadlineExceeded","status":"False","type":"Progressing"}],"observedGeneration":1,"replicas":1,"unavailableReplicas":1,"updatedReplicas":1}}
+  creationTimestamp: "2022-12-20T22:38:38Z"
+  generation: 2
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: goop
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/part-of: goop
+    control-plane: controller-manager
+  name: goop-controller-manager
+  namespace: goop-system
+  resourceVersion: "3616"
+  uid: 85fd23fb-950f-4548-9c1d-ee3111ec185b
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      creationTimestamp: null
+      labels:
+        control-plane: controller-manager
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+                - ppc64le
+                - s390x
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+      containers:
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=0
+        image: k3d-devregistry:5000/gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
+        imagePullPolicy: IfNotPresent
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        command:
+        - /manager
+        image: k3d-devregistry:5000/controller:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: manager
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+      serviceAccount: goop-controller-manager
+      serviceAccountName: goop-controller-manager
+      terminationGracePeriodSeconds: 10

@@ -1,0 +1,19 @@
+domain: example.com
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: goop
+repo: github.com/example/goop
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: example.com
+  group: goop
+  kind: Goop
+  path: github.com/example/goop/api/v1alpha1
+  version: v1alpha1
+version: "3"

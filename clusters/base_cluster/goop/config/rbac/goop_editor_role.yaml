@@ -1,0 +1,31 @@
+# permissions for end users to edit goops.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: goop-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: goop
+    app.kubernetes.io/part-of: goop
+    app.kubernetes.io/managed-by: kustomize
+  name: goop-editor-role
+rules:
+- apiGroups:
+  - goop.example.com
+  resources:
+  - goops
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - goop.example.com
+  resources:
+  - goops/status
+  verbs:
+  - get

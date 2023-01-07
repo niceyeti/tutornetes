@@ -1,5 +1,7 @@
 go 1.19
 
-use ./clusters/base_cluster/go_webhook_example
-
-use ./clusters/base_cluster/go_grpc_example
+use (
+	./clusters/base_cluster/go_grpc_example
+	./clusters/base_cluster/go_webhook_example
+	./clusters/base_cluster/goop
+)

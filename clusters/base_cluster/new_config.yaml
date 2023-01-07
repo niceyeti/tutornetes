@@ -1,0 +1,39 @@
+agents: 2
+apiVersion: k3d.io/v1alpha4
+image: rancher/k3s
+kind: Simple
+kubeAPI:
+  hostIP: 127.0.0.1
+  hostPort: "6445"
+metadata:
+  name: devcluster
+options:
+  k3d:
+    disableImageVolume: false
+    disableLoadbalancer: false
+    disableRollback: false
+    loadbalancer: {}
+    timeout: 480000000000
+    wait: true
+  k3s:
+    extraArgs:
+    - arg: --disable=traefik
+      nodeFilters:
+      - server:*
+  kubeconfig:
+    switchCurrentContext: true
+    updateDefaultKubeconfig: true
+  runtime:
+    HostPidMode: false
+ports:
+- nodeFilters:
+  - loadbalancer
+  port: 8081:80
+registries:
+  create:
+    host: 127.0.0.1
+    hostPort: "5000"
+    name: k3d-devregistry
+    proxy:
+      remoteURL: ""
+servers: 1
