@@ -1,0 +1,11 @@
+apiVersion: goop.example.com/v1alpha1
+kind: Goop
+metadata:
+  labels:
+    run: test2
+  name: test2
+  namespace: default
+spec:
+  foo: some string
+  job_count: 2
+
