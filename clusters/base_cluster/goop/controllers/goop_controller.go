@@ -293,27 +293,20 @@ func (r *GoopReconciler) ensureFinalizer(next HandlerFunc) HandlerFunc {
 // performs deletion tasks and aborts other handlers.
 func (r *GoopReconciler) handleDeletion(next HandlerFunc) HandlerFunc {
 	return func(ctx context.Context, log *logr.Logger, gr *goopRequest) (ctrl.Result, error) {
-		// Check if the Goop instance is marked to be deleted, which is
+		// FUTURE: aborting when the object is in the completed finalized state is a
+		// perfunctory sink, but this omits other possible reasons or causes for reconciliation
+		// after finalization.
+		if isCompleteState(gr.goop, finalized) {
+			log.Info("Object is already finalized, aborting handling.")
+			// Stop reconciliation as the item is being deleted
+			return ctrl.Result{}, nil
+		}
+
+		// Check if the Goop instance is marked to be deleted,
 		// indicated by the deletion timestamp being set.
 		isGoopMarkedToBeDeleted := gr.goop.GetDeletionTimestamp() != nil
 		if isGoopMarkedToBeDeleted {
 			if controllerutil.ContainsFinalizer(gr.goop, goopFinalizer) {
-				log.Info("Performing Finalizer Operations for goop before deleting")
-				// Add a status "Downgrade" to define that this resource begins its process to be terminated.
-				goop, err := r.setStatusCondition(
-					ctx,
-					gr.goop,
-					metav1.Condition{
-						Type:    finalized,
-						Status:  metav1.ConditionUnknown,
-						Reason:  finalized,
-						Message: fmt.Sprintf("Performing goop finalizer operations for %s", gr.req.NamespacedName)})
-				if err != nil {
-					log.Error(err, "Failed to update goop status")
-					return ctrl.Result{}, err
-				}
-				gr.goop = goop
-
 				// Perform all operations required before remove the finalizer and allow
 				// the Kubernetes API to remove the custom resource.
 				// TODO: I need to implement this
@@ -323,45 +316,37 @@ func (r *GoopReconciler) handleDeletion(next HandlerFunc) HandlerFunc {
 				// then you need to ensure that all worked fine before deleting and updating the Downgrade status
 				// otherwise, you should requeue here.
 
-				// Re-fetch the goop Custom Resource before updating its status,
-				// such that we have the latest state of the resource on the cluster and avoid
-				// raising "the object has been modified, please apply your changes to the
-				// latest version and try again" which would re-trigger the reconciliation
-				if err := r.Get(ctx, gr.req.NamespacedName, gr.goop); err != nil {
-					log.Error(err, "Failed to re-fetch goop")
-					return ctrl.Result{}, err
-				}
-
 				log.Info("Removing Finalizer for goop after successfully performing operations")
 				if ok := controllerutil.RemoveFinalizer(gr.goop, goopFinalizer); !ok {
 					log.Error(errors.New("failed to remove finalizer"), "Failed to remove finalizer for Goop")
 					return ctrl.Result{Requeue: true}, nil
 				}
 
-				/*
-					if err := r.Update(ctx, gr.goop); err != nil {
-						log.Error(err, "Failed to remove finalizer for goop")
-						return ctrl.Result{}, err
-					}
-				*/
-
-				if err := r.Get(ctx, gr.req.NamespacedName, gr.goop); err != nil {
+				if err := r.Update(ctx, gr.goop); err != nil {
 					log.Error(err, "Failed to re-fetch goop")
 					return ctrl.Result{}, err
 				}
 
-				goop, err = r.setStatusCondition(ctx,
-					gr.goop,
-					metav1.Condition{
-						Type:    finalized,
-						Status:  metav1.ConditionTrue,
-						Reason:  finalized,
-						Message: fmt.Sprintf("Finalization for goop %s completed", gr.goop.Name)})
-				if err != nil {
-					log.Error(err, "Failed to update goop status")
-					return ctrl.Result{}, err
-				}
-				gr.goop = goop
+				return ctrl.Result{Requeue: true}, nil
+			}
+
+			// FUTURE: I met with a ton of api nastiness when attempting to mark the goop object's
+			// state as 'finalized' without raising 'object has been modified' errors, not matter
+			// whether or not the view of the goop object was up to date or not, nor the correct
+			// sequence of the above finalizer-removal code. The 'finalized' state may not be necessary,
+			// since the object will simply be deleted (and unqueryable) after the finalizer is removed
+			// above, making this unreachable code.
+			_, err := r.setStatusCondition(
+				ctx,
+				gr.goop,
+				metav1.Condition{
+					Type:    finalized,
+					Status:  metav1.ConditionTrue,
+					Reason:  finalized,
+					Message: fmt.Sprintf("Finalization for goop %s completed", gr.goop.Name)})
+			if err != nil {
+				log.Error(err, "Failed to update goop status")
+				return ctrl.Result{}, err
 			}
 
 			// TODO: smooth out the corners of deletion. If deletion/finalization is completed,
@@ -453,7 +438,8 @@ func (r *GoopReconciler) handleCreation(next HandlerFunc) HandlerFunc {
 // are one's cluster-wide requirements; here, I merely check that the daemonset is
 // fully available and ready, which isn't a robust check of whether or not jobs
 // completed, aka their tool processes returned 0, which would have to be done by
-// checking the exit codes of all the init containers.
+// checking the exit codes of all the init containers. This returns true before
+// the daemonset containers are even running, which would require a separate query.
 func isJobCompleted(ds *appsv1.DaemonSet) bool {
 	return ds.Status.DesiredNumberScheduled == ds.Status.NumberReady &&
 		ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable
@@ -477,18 +463,20 @@ func (r *GoopReconciler) handleCompletion(next HandlerFunc) HandlerFunc {
 				return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
 			}
 
-			meta.SetStatusCondition(
-				&gr.goop.Status.Conditions,
+			goop, err := r.setStatusCondition(
+				ctx,
+				gr.goop,
 				metav1.Condition{
 					Type:    completed,
 					Status:  metav1.ConditionTrue,
 					Reason:  completed,
 					Message: fmt.Sprintf("Daemonset for goop completed successfully: %s", gr.goop.Name)})
-
-			if err := r.Status().Update(ctx, gr.goop); err != nil {
-				log.Error(err, "Failed to update goop creation completion")
+			if err != nil {
+				log.Error(err, "Failed to update goop in completion")
 				return ctrl.Result{}, err
 			}
+
+			gr.goop = goop
 		}
 
 		log.Info("Calling next from handleCompletion")
