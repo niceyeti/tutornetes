@@ -149,15 +149,13 @@ Testing strategy:
 2) Run `make test` to download all envtest binaries to ./bin for integration testing, and run testing
 Note: I have only been able to run `make test` from the goop/ directory, not `go test .` nor `ginkgo` in goop/controllers.
 For whatever reason the latter two options do not find the api-server and etcd server binaries correctly,
-as shown in the error output.
+as shown in the error output. These are environment considerations and dependency chains that I'm not interested
+in maintaining, for the sake of a simple controller prototype.
 
 #### How envtest works
 
 Docs: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/envtest
 Example controller test: https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
-
-
-
 
 
 ## Details
