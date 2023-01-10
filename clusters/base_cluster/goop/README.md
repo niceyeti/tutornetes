@@ -1,20 +1,18 @@
-# goop
+# Goop
 
-Goop is a simple golang operator, purely for exercise, and the value of the business logic is basically nil.
-This operator merely simulates the management of a stateful application,
-by deploying a few dummy Job objects when a Goop object is created:
-1) Goop object is created
-2) Goop controller observes creation and deploys Goop.JobCount 'worker' Pods.
-These are merely busybox 'worker' containers to which 'cmd' strings are passed and printed.
-3) Goop controller observes completion of all the Jobs and marks the Goop object as "Completed"
+Goop is a simple k8s go operator, purely for exercise, thus the value of the business logic isn't super important.
+The CRD/Operator implements a per-node Job paradigm whereby:
+1) The user specifies some node level command in a Goop CRD
+2) On creation, the operator deploys the Goop 'job' as initContainers of a Daemonset, since Daemonsets enforce
+per-node semantics.
+3) The Goop object is marked 'completed' based on some cluster-level queries
 
-This is a simple example of a stateful object, needlessly complicated by operator code
-that could be replaced by k8s primitives instead.
-But it can be easily extended to more complex patterns, such 
-as implementing various forms of Job logic and dependencies,
+This is a simple example of a stateful object built solely atop k8s primitives,
+but it can be easily extended to more complex patterns, such 
+as implementing various forms of job logic and dependencies,
 such as for node configuration, db migration, or a build system.
 Kubernetes has no native distributed-job object for ensuring that node-based jobs are distributed
-across nodes, but a modicum of utility of this operator is that it achieves this using daemonsets.
+across nodes, and a modicum of utility of this operator is that it achieves this using daemonsets.
 
 ## Current State (delete when controller complete)
 The following commands run the controller in the cluster, but there are missing resources/roles:
@@ -119,6 +117,48 @@ There are a few order of operations requirements and gotchas with environmental 
     3) operator-sdk create api --group cache --version v1alpha1 --kind Memcached --resource --controller
     4) make docker-build docker-push IMG="127.0.0.1:5000/memcached-operator:v0.0.1"
         * NOTE: 127.0.0.1:5000 in this command is currently how one reaches the image repo running in the base_cluster
+
+## Test strategy for simple CRDs
+
+Operator testing can be broken down into two categories:
+1) unit testing of methods
+2) behavioral testing of the operator
+
+* (1) is merely the typical code/developer quality responsibility: find out what can be factored out
+and tested independently and quickly, without spinning up dependencies and integration test resources.
+* (2) gets closer to integration testing. Kubebuilder generates dummy test files utilizing envtest,
+so use that. Whereas (1) is a matter of developer skill and coding, (2) is the meat of operator testing.
+
+Testing style: kubebuilder is setup to generate envtest-based tests, which in turn use Ginkgo.
+Although I normally use GoConvey, I'm sticking with Ginkgo since that's what kubebuilder and its
+examples provide, and its easy to use either test suite. The BDD semantics of Ginkgo are not too
+much overhead for developers to switch between/know, and the increased dependencies only exist in
+the test files.
+
+Testing strategy:
+- everything that would require the api server?
+    * CRD installation
+    * CRD creation and Goop states/completion
+- everything you want to test on save, without awaiting huge cluster state:
+    * CRD creation, other basic reqs
+    * CR state and lifecycle expectations
+    * err, should-not-err, should-requeue behavior
+
+#### Test steps so far
+1) Code generation should generate the suite_test.go file, in the controllers package. Fill this in with Ginkgo-style tests.
+2) Run `make test` to download all envtest binaries to ./bin for integration testing, and run testing
+Note: I have only been able to run `make test` from the goop/ directory, not `go test .` nor `ginkgo` in goop/controllers.
+For whatever reason the latter two options do not find the api-server and etcd server binaries correctly,
+as shown in the error output.
+
+#### How envtest works
+
+Docs: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/envtest
+Example controller test: https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html
+
+
+
+
 
 ## Details
 

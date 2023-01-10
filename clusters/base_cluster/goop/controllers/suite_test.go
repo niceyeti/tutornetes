@@ -19,6 +19,7 @@ package controllers
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,23 +37,50 @@ import (
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
+// Also see the example: https://github.com/kubernetes-sigs/kubebuilder/blob/v3.7.0/testdata/project-v3-with-deploy-image/controllers/busybox_controller_test.go
+// And primarily: https://onsi.github.io/ginkgo/#getting-started
 
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var crdPaths []string = []string{filepath.Join("..", "config", "crd", "bases")}
 
 func TestAPIs(t *testing.T) {
+	// RegisterFailHandler(Fail) is the single line of glue code connecting Ginkgo to Gomega.
+	// If we were to avoid dot-imports this would read as gomega.RegisterFailHandler(ginkgo.Fail) - what we're doing here is telling our matcher library (Gomega) which function to call (Ginkgo's Fail) in the event a failure is detected.
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Controller Suite")
 }
+
+// TestCRD smoke tests the CRD:
+// - can it be installed without errors
+var _ = Describe("CRD installation", func() {
+	Context("CRD installation test", func() {
+		It("Should create the CRD successfully", func() {
+			opts := envtest.CRDInstallOptions{
+				Paths:              crdPaths,
+				ErrorIfPathMissing: true,
+				MaxTime:            5 * time.Second,
+				PollInterval:       200 * time.Millisecond,
+				CleanUpAfterUse:    true,
+			}
+
+			defs, err := envtest.InstallCRDs(cfg, opts)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(defs)).Should(Equal(1))
+			Expect(defs[0].Spec.Names.Kind).Should(Equal("Goop"))
+			//err = envtest.WaitForCRDs()
+		})
+	})
+})
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     crdPaths,
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -65,6 +93,7 @@ var _ = BeforeSuite(func() {
 	err = goopv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	// This marker allows new schemas to be added here automatically when a new API is added to the project.
 	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
