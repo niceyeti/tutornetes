@@ -1,28 +1,21 @@
-![image](wrench.png)
+## About
 
-```
-     ____        _ ____     _   __      __     ____                    __    __  
-    / __ )__  __(_) / /_   / | / /___  / /_   / __ )____  __  ______ _/ /_  / /_ 
-   / __  / / / / / / __/  /  |/ / __ \/ __/  / __  / __ \/ / / / __ `/ __ \/ __/ 
-  / /_/ / /_/ / / / /_   / /|  / /_/ / /_   / /_/ / /_/ / /_/ / /_/ / / / / /_   
- /_____/\__,_/_/_/\__/  /_/ |_/\____/\__/  /_____/\____/\__,_/\__, /_/ /_/\__/   
-                                                            /____/               
-```
-... and frequently 'borrowed'.
+The difficult part of learning Kubernetes and CNCF components is learning and configuring the many resources required. You dip in a toe only to get swept away by the tide of components, languages, and development tools! On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
 
-## Soapbox
+This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt. The base environment allows you to run a complete k8s cluster locally under k3d, with live updates using tilt, and a bunch of devsecops bells and whistles built into the devcontainer and tilt artifacts for cluster security scanning with kubescape.
 
-The difficult part of learning Kubernetes and CNCF components is learning and configuring the many resources required. You dip in a toe pnly to get swept away by the tide of components, languages, and development tools! On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
+The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc, and rapidly develop new clusters, charts, and so forth, prototype a bit and then create an independent repo containing only what you need.
 
-This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt.
-The objective is that you can branch off the base_cluster project, modify it to your deployment/app/infrastructure/etc, and rapidly develop new clusters, charts, and so forth. So for example, create a branch, run the base_cluster
+So for example, create a branch, run the base_cluster
 to ensure your environment is consistent, then start modifying the base_cluster to rapidly prototype a new cluster, app, chart, etc. The repo includes builtin chart/cluster scanning with kubescape to provide security linting.
 
 This repo's goals are pure dev research and training:
+
 1) the ability to design, develop, and spin-up clusters with different properties
 2) to rapidly design, develop and test cloud apps themselves
-3) to provide a learning environment, your own personal k8s playground
-4) minimal free-climbing: pushing quality concerns as far upstream in the development process as possible, with immediate development feedback and security/quality scanning.
+3) refine and tailor the devsecops artifacts that you need
+4) to provide a learning environment, your own personal k8s playground
+5) minimal free-climbing: pushing quality concerns as far upstream in the development process as possible, with immediate development feedback and security/quality scanning.
 
 ## Repo Organization
 * */clusters*: create folders here containing content (helm charts, k3d startup, etc). describing a cluster
@@ -108,3 +101,15 @@ All credit for these technologies goes to their authors, with sincere thanks. We
 Those who teach instead of tell deserve utmost praise. Some helpful teachers:
 * https://www.youtube.com/c/MarcelDempers
 * https://www.youtube.com/c/DevOpsToolkit
+
+![image](wrench.png)
+
+```
+     ____        _ ____     _   __      __     ____                    __    __  
+    / __ )__  __(_) / /_   / | / /___  / /_   / __ )____  __  ______ _/ /_  / /_ 
+   / __  / / / / / / __/  /  |/ / __ \/ __/  / __  / __ \/ / / / __ `/ __ \/ __/ 
+  / /_/ / /_/ / / / /_   / /|  / /_/ / /_   / /_/ / /_/ / /_/ / /_/ / / / / /_   
+ /_____/\__,_/_/_/\__/  /_/ |_/\____/\__/  /_____/\____/\__,_/\__, /_/ /_/\__/   
+                                                            /____/               
+```
+... and frequently 'borrowed'.
