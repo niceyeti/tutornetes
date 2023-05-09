@@ -28,6 +28,7 @@ This repo's goals are pure dev research and training:
         * */ops_extras*: Not yet fully defined, not a first-class project in the repo. Currently I use this to store declarative examples of role-bindings, etc.
     * */misc*: an unhealthy collection of review notes and other stuff exposing my own ignorance :)
 The primary resources to understand are in the *base_cluster* folder:
+
 | Resource | Description |
 | :--- | :--- |
 | *k3d_config.yaml* | The base cluster definition. Modify this to create clusters with different properties: nodes, volumes, etc. |
