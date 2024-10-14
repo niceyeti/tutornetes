@@ -1,6 +1,6 @@
 ## About
 
-The difficult part of learning Kubernetes and CNCF components is learning and configuring the many resources required. You dip in a toe only to get swept away by the tide of components, languages, and development tools! On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
+The difficult part of learning Kubernetes and CNCF components is simply configuring the many resources required. You dip in a toe only to get swept away by the tide of components, languages, and development tools. On the other hand, learning 'all' of DevSecOps is such a rapidly moving target that a flexible dev/learning environment and a positive attitude toward learning carry one further than any certification.
 
 This repo provides a template for developing k8s clusters and cloud applications using k3d, istio, helm, and tilt. The base environment allows you to run a complete k8s cluster locally under k3d, with live updates using tilt, and a bunch of devsecops bells and whistles built into the devcontainer and tilt artifacts for cluster security scanning with kubescape.
 
@@ -14,10 +14,11 @@ This repo's goals are pure dev research and training:
 1) the ability to design, develop, and spin-up clusters with different properties
 2) to rapidly design, develop and test cloud apps themselves
 3) refine and tailor the devsecops artifacts that you need
-4) to provide a learning environment, your own personal k8s playground
+4) to provide a learning environment, your personal k8s playground
 5) minimal free-climbing: pushing quality concerns as far upstream in the development process as possible, with immediate development feedback and security/quality scanning.
 
 ## Repo Organization
+
 * */clusters*: create folders here containing content (helm charts, k3d startup, etc). describing a cluster
     * */base_cluster*: an example cluster
         * */go_app*: an example golang cloud application with some basic endpoints and a static page
@@ -39,6 +40,7 @@ The primary resources to understand are in the *base_cluster* folder:
 | *go_app/src* |  The source code for an extremely simple golang webapp; basically a dockerfile and a few dummy endpoints. |
 
 ## Pre-reqs
+
 The development container provides full golang development support, just open the tutornetes/ folder in vscode and build the dev container.
 
 However these components are required on your host (outside the dev container):
@@ -73,6 +75,7 @@ I set this up to be run manually because it is easiest to maintain and I am unli
 
 
 ## Updating and Maintenance
+
 * Updating k3d: after updating k3d and k3s, run `k3d config migrate k3d_config.yaml new_config.yaml` and review the new config, then commit it. The migration code itself can be reviewed in the k3d repo.
 * Installing and updating istio: istio was installed using the installation directions [here](https://istio.io/latest/docs/setup/getting-started/). I installed it to the misc/ directory so the version is part of the repository, not the system. The istio folder contains many examples: web app, web sockets, operator, external access, and more.
     * Installation:
@@ -83,6 +86,7 @@ I set this up to be run manually because it is easiest to maintain and I am unli
     * Updating: same as installation, just review and update how the istio manifest is committed; the intent is simply to ensure that the istio version is in the repo, and no other istio artifacts.
 
 ## DevOps Resources
+
 When learning kubernetes I consciously avoided online materials entirely and focused solely on books. Some I found most useful:
 1) [Kubernetes In Action](https://www.amazon.com/Kubernetes-Action-Marko-Luksa/dp/1617293725/)
 2) [Kubernetes Patterns](https://www.amazon.com/Kubernetes-Patterns-Designing-Cloud-Native-Applications/dp/1492050288/)
@@ -95,6 +99,7 @@ When learning kubernetes I consciously avoided online materials entirely and foc
 
 
 ## Credit
+
 This repo was gratefully built atop k3d, docker, tilt, helm, k3s, kubescape, istio, and kubernetes, lots of hard work by Google, Mirantis, ArmoSec, Tilt, and others.
 Any copyright/license issues (cloud-native source licenses are prone to 'upgrade') are unintentional, and this repo is for non-commercial use.
 All credit for these technologies goes to their authors, with sincere thanks. We stand kittens on the shoulders of giants and call ourselves lions, lol.
